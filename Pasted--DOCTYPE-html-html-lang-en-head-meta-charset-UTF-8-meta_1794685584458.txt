@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>A Forest Tale</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background: #2b3a29;
+      overflow: hidden;
+      touch-action: none;
+      font-family: 'Georgia', serif;
+      color: #fdf6e3;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      background: rgba(34, 46, 32, 0.72);
+      backdrop-filter: blur(3px);
+    }
+    h1 {
+      font-size: 38px;
+      color: #f4e4bc;
+      text-shadow: 2px 3px 0px #2d1e12;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    p.subtitle {
+      font-size: 16px;
+      color: #d8c8a8;
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+    .char-grid {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 500px;
+    }
+    .char-card {
+      background: #4a3525;
+      border: 3px solid #c9a66b;
+      border-radius: 14px;
+      padding: 14px 16px;
+      width: 135px;
+      cursor: pointer;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+      transition: transform 0.15s;
+    }
+    .char-card:active {
+      transform: scale(0.95);
+    }
+    .char-card canvas {
+      width: 80px;
+      height: 70px;
+      margin: 0 auto 8px;
+      display: block;
+    }
+    .char-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffefd5;
+    }
+    .char-species {
+      font-size: 13px;
+      color: #cbb692;
+      margin-top: 2px;
+    }
+    #hud {
+      position: absolute;
+      top: 18px;
+      right: 22px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #fdf6e3;
+      text-shadow: 2px 2px 0px #2b1d12;
+      display: none;
+      pointer-events: none;
+    }
+    #instructions {
+      position: absolute;
+      top: 22%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(62, 43, 28, 0.88);
+      border: 2px solid #d4b483;
+      border-radius: 16px;
+      padding: 18px 26px;
+      text-align: center;
+      display: none;
+      pointer-events: none;
+      width: 85%;
+      max-width: 360px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+    }
+    #instructions h2 {
+      font-size: 22px;
+      color: #f4e4bc;
+      margin-bottom: 10px;
+    }
+    #instructions p {
+      font-size: 16px;
+      line-height: 1.5;
+      color: #efe4ce;
+      margin-bottom: 8px;
+    }
+    .tap-prompt {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #ffd166;
+      font-size: 18px;
+      animation: pulse 1.4s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    .btn {
+      margin-top: 18px;
+      padding: 14px 32px;
+      font-size: 20px;
+      font-family: 'Georgia', serif;
+      font-weight: bold;
+      background: #7c9a5e;
+      color: #fffbe9;
+      border: 3px solid #d9e4c8;
+      border-radius: 12px;
+      box-shadow: 0 5px 0 #3f522e;
+      cursor: pointer;
+    }
+    .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #3f522e;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Character Selection Screen -->
+  <div id="selectScreen" class="overlay">
+    <h1>A Forest Tale</h1>
+    <p class="subtitle">Choose your woodland traveler</p>
+    <div class="char-grid">
+      <div class="char-card" onclick="selectCharacter('mac')">
+        <canvas id="previewMac" width="80" height="70"></canvas>
+        <div class="char-name">Mac</div>
+        <div class="char-species">Field Mouse</div>
+      </div>
+      <div class="char-card" onclick="selectCharacter('reggie')">
+        <canvas id="previewReggie" width="80" height="70"></canvas>
+        <div class="char-name">Reggie</div>
+        <div class="char-species">Raccoon</div>
+      </div>
+      <div class="char-card" onclick="selectCharacter('sebal')">
+        <canvas id="previewSebal" width="80" height="70"></canvas>
+        <div class="char-name">Sebal</div>
+        <div class="char-species">Squirrel</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Instructions before run starts -->
+  <div id="instructions">
+    <h2>How to Play</h2>
+    <p>⬆️ <strong>Swipe Up</strong> to Jump</p>
+    <p>⬇️ <strong>Swipe Down</strong> to Duck</p>
+    <div class="tap-prompt">Tap anywhere to start!</div>
+  </div>
+
+  <!-- Distance / Score HUD -->
+  <div id="hud">Distance: <span id="scoreDisplay">0</span>m</div>
+
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen" class="overlay" style="display: none;">
+    <h1>Oh, Bother!</h1>
+    <p class="subtitle" style="font-style: normal; font-size: 20px; margin-bottom: 6px;">
+      You traveled <strong id="finalScore" style="color: #ffd166;">0</strong> meters
+    </p>
+    <p class="subtitle" id="bestScoreText" style="margin-bottom: 12px;">Best: 0m</p>
+    <button class="btn" onclick="prepareRun()">Try Again</button>
+    <button class="btn" style="background: #6b4e38; border-color: #c9a66b; box-shadow: 0 5px 0 #3b281a; font-size: 15px; padding: 10px 20px; margin-top: 12px;" onclick="returnToSelect()">Change Character</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height, groundY;
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      groundY = Math.floor(height * 0.78);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Game States: 'SELECT', 'READY', 'PLAYING', 'GAMEOVER'
+    let gameState = 'SELECT';
+    let selectedChar = 'mac';
+    let score = 0;
+    let bestScore = 0;
+    let gameSpeed = 5.5;
+    let frameCount = 0;
+    let floorOffset = 0;
+
+    // Player physics & animation state
+    const player = {
+      x: 90,
+      y: 0,
+      vy: 0,
+      width: 44,
+      normalHeight: 46,
+      duckHeight: 24,
+      isGrounded: true,
+      isDucking: false,
+      duckTimer: 0
+    };
+
+    let obstacles = [];
+    let nextSpawnTimer = 90;
+
+    // Generate static cottagecore background details once per screen size
+    let bgDetails = [];
+    function generateStaticForest() {
+      bgDetails = [];
+      // Distant soft trees
+      for (let x = 20; x < width + 100; x += 95) {
+        bgDetails.push({
+          type: 'bgTree',
+          x: x + (Math.random() * 30 - 15),
+          trunkW: 24 + Math.random() * 14,
+          canopyR: 55 + Math.random() * 25,
+          shade: Math.random() > 0.5 ? '#3b5335' : '#46613e'
+        });
+      }
+      // Cottagecore mushrooms, ferns, and wildflowers along the background edge
+      for (let x = 15; x < width; x += 55) {
+        const roll = Math.random();
+        if (roll < 0.35) {
+          bgDetails.push({ type: 'mushroom', x: x + Math.random() * 20, scale: 0.7 + Math.random() * 0.5 });
+        } else if (roll < 0.75) {
+          bgDetails.push({ type: 'fern', x: x + Math.random() * 20, scale: 0.8 + Math.random() * 0.4 });
+        } else {
+          bgDetails.push({ type: 'flowers', x: x + Math.random() * 20, color: Math.random() > 0.5 ? '#f7d060' : '#f4978e' });
+        }
+      }
+    }
+    generateStaticForest();
+    window.addEventListener('resize', generateStaticForest);
+
+    // Draw Character Function (Side profile facing right)
+    function drawCharacter(c, type, x, y, isDucking, runCycle, isGrounded) {
+      c.save();
+      c.translate(x, y);
+
+      const legSwing = isGrounded ? Math.sin(runCycle * 0.28) * 7 : 5;
+      const bob = isGrounded && !isDucking ? Math.abs(Math.sin(runCycle * 0.28)) * 3 : 0;
+
+      if (isDucking) {
+        c.translate(0, 20);
+        c.scale(1.15, 0.58);
+      } else {
+        c.translate(0, -bob);
+      }
+
+      if (type === 'mac') {
+        // MAC THE MOUSE
+        // Long pink tail
+        c.strokeStyle = '#e5989b';
+        c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(-16, 12);
+        c.quadraticCurveTo(-34, 4 + Math.sin(runCycle * 0.2) * 5, -38, 14);
+        c.stroke();
+
+        // Back leg
+        c.fillStyle = '#8d7b68';
+        c.beginPath();
+        c.ellipse(-6 - legSwing, 18, 6, 4, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Body (warm taupe-gray)
+        c.fillStyle = '#a4907c';
+        c.beginPath();
+        c.ellipse(0, 6, 18, 13, -0.1, 0, Math.PI * 2);
+        c.fill();
+
+        // Cozy cottagecore green scarf
+        c.fillStyle = '#6a994e';
+        c.beginPath();
+        c.roundRect(6, -5, 9, 14, 4);
+        c.fill();
+
+        // Head (pointed snout facing right)
+        c.fillStyle = '#a4907c';
+        c.beginPath();
+        c.moveTo(8, -8);
+        c.lineTo(28, 2);
+        c.lineTo(10, 9);
+        c.closePath();
+        c.fill();
+
+        // Round Mouse Ear
+        c.fillStyle = '#8d7b68';
+        c.beginPath();
+        c.arc(6, -11, 8, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#f2b5d4';
+        c.beginPath();
+        c.arc(7, -11, 4.5, 0, Math.PI * 2);
+        c.fill();
+
+        // Pink nose & eye
+        c.fillStyle = '#ff8fa3';
+        c.beginPath();
+        c.arc(28, 2, 2.5, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#1d1e18';
+        c.beginPath();
+        c.arc(17, -2, 2, 0, Math.PI * 2);
+        c.fill();
+
+        // Front leg
+        c.fillStyle = '#b8a693';
+        c.beginPath();
+        c.ellipse(8 + legSwing, 18, 6, 4, 0, 0, Math.PI * 2);
+        c.fill();
+
+      } else if (type === 'reggie') {
+        // REGGIE THE RACCOON
+        // Bushy ringed tail
+        c.save();
+        c.translate(-16, 6);
+        c.rotate(-0.3 + Math.sin(runCycle * 0.2) * 0.1);
+        c.fillStyle = '#6c757d';
+        c.beginPath();
+        c.ellipse(-12, 0, 15, 7, 0, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#2b2d42';
+        c.fillRect(-18, -6, 4, 12);
+        c.fillRect(-10, -6, 4, 12);
+        c.restore();
+
+        // Back leg
+        c.fillStyle = '#343a40';
+        c.beginPath();
+        c.ellipse(-7 - legSwing, 18, 7, 4.5, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Plump Raccoon Body
+        c.fillStyle = '#6c757d';
+        c.beginPath();
+        c.ellipse(0, 5, 20, 15, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Head
+        c.fillStyle = '#8d99ae';
+        c.beginPath();
+        c.arc(13, -4, 11, 0, Math.PI * 2);
+        c.fill();
+
+        // Snout
+        c.fillStyle = '#edf2f4';
+        c.beginPath();
+        c.ellipse(23, -1, 6, 4.5, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Black Bandit Mask
+        c.fillStyle = '#2b2d42';
+        c.beginPath();
+        c.ellipse(17, -4, 4.5, 5.5, 0.2, 0, Math.PI * 2);
+        c.fill();
+
+        // Pointed Ear
+        c.fillStyle = '#495057';
+        c.beginPath();
+        c.moveTo(6, -12);
+        c.lineTo(10, -21);
+        c.lineTo(15, -12);
+        c.closePath();
+        c.fill();
+
+        // Eye & Nose
+        c.fillStyle = '#ffffff';
+        c.beginPath();
+        c.arc(18, -4, 1.8, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#111';
+        c.beginPath();
+        c.arc(28, -1, 2.5, 0, Math.PI * 2);
+        c.fill();
+
+        // Front leg
+        c.fillStyle = '#495057';
+        c.beginPath();
+        c.ellipse(8 + legSwing, 18, 7, 4.5, 0, 0, Math.PI * 2);
+        c.fill();
+
+      } else if (type === 'sebal') {
+        // SEBAL THE SQUIRREL
+        // Big fluffy curled tail
+        c.fillStyle = '#bc4749';
+        c.beginPath();
+        c.arc(-16, 0, 14, 0, Math.PI * 2);
+        c.arc(-18, -11, 11, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#d96b43';
+        c.beginPath();
+        c.arc(-15, -2, 9, 0, Math.PI * 2);
+        c.fill();
+
+        // Back leg
+        c.fillStyle = '#9e383a';
+        c.beginPath();
+        c.ellipse(-6 - legSwing, 18, 6.5, 4, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Body (russet red-orange)
+        c.fillStyle = '#c8553d';
+        c.beginPath();
+        c.ellipse(0, 6, 17, 13, -0.15, 0, Math.PI * 2);
+        c.fill();
+
+        // Cream belly patch
+        c.fillStyle = '#f2e8cf';
+        c.beginPath();
+        c.ellipse(5, 8, 9, 9, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Head
+        c.fillStyle = '#c8553d';
+        c.beginPath();
+        c.arc(13, -5, 10, 0, Math.PI * 2);
+        c.fill();
+
+        // Tufted Squirrel Ear
+        c.beginPath();
+        c.moveTo(7, -13);
+        c.lineTo(9, -22);
+        c.lineTo(14, -13);
+        c.closePath();
+        c.fill();
+
+        // Cheek & Nose & Eye
+        c.fillStyle = '#f2e8cf';
+        c.beginPath();
+        c.arc(20, -2, 4.5, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#2b1d12';
+        c.beginPath();
+        c.arc(23, -3, 2, 0, Math.PI * 2);
+        c.arc(16, -6, 2, 0, Math.PI * 2);
+        c.fill();
+
+        // Front leg
+        c.fillStyle = '#d96b43';
+        c.beginPath();
+        c.ellipse(8 + legSwing, 18, 6.5, 4, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+
+      c.restore();
+    }
+
+    // Render character previews on the selection cards
+    function renderPreviews() {
+      const mCtx = document.getElementById('previewMac').getContext('2d');
+      drawCharacter(mCtx, 'mac', 42, 42, false, 0, true);
+
+      const rCtx = document.getElementById('previewReggie').getContext('2d');
+      drawCharacter(rCtx, 'reggie', 42, 42, false, 0, true);
+
+      const sCtx = document.getElementById('previewSebal').getContext('2d');
+      drawCharacter(sCtx, 'sebal', 42, 42, false, 0, true);
+    }
+    renderPreviews();
+
+    function selectCharacter(charName) {
+      selectedChar = charName;
+      document.getElementById('selectScreen').style.display = 'none';
+      prepareRun();
+    }
+
+    function returnToSelect() {
+      gameState = 'SELECT';
+      document.getElementById('gameOverScreen').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('selectScreen').style.display = 'flex';
+    }
+
+    function prepareRun() {
+      gameState = 'READY';
+      score = 0;
+      gameSpeed = 5.5;
+      obstacles = [];
+      nextSpawnTimer = 70;
+      player.y = groundY - 22;
+      player.vy = 0;
+      player.isGrounded = true;
+      player.isDucking = false;
+
+      document.getElementById('gameOverScreen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      document.getElementById('scoreDisplay').textContent = '0';
+      document.getElementById('instructions').style.display = 'block';
+    }
+
+    function startRun() {
+      if (gameState !== 'READY') return;
+      gameState = 'PLAYING';
+      document.getElementById('instructions').style.display = 'none';
+    }
+
+    // Touch / Swipe Input Handling
+    let touchStartY = 0;
+    let touchStartX = 0;
+
+    window.addEventListener('touchstart', (e) => {
+      if (gameState === 'READY') {
+        startRun();
+        return;
+      }
+      if (gameState === 'PLAYING') {
+        touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (gameState !== 'PLAYING') return;
+      const dy = e.touches[0].clientY - touchStartY;
+
+      if (dy < -28) {
+        // Swipe Up -> Jump
+        jump();
+        touchStartY = e.touches[0].clientY;
+      } else if (dy > 28) {
+        // Swipe Down -> Duck
+        duck();
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    // Optional keyboard support if tested on desktop
+    window.addEventListener('keydown', (e) => {
+      if (gameState === 'READY' && (e.code === 'Space' || e.code === 'ArrowUp')) {
+        startRun();
+      } else if (gameState === 'PLAYING') {
+        if (e.code === 'ArrowUp' || e.code === 'Space') jump();
+        if (e.code === 'ArrowDown') duck();
+      }
+    });
+
+    function jump() {
+      if (player.isGrounded) {
+        player.vy = -13.2;
+        player.isGrounded = false;
+        player.isDucking = false;
+      }
+    }
+
+    function duck() {
+      player.isDucking = true;
+      player.duckTimer = 42; // Duck duration in frames
+      if (!player.isGrounded) {
+        // Fast-drop if swiping down mid-air
+        player.vy = 10;
+      }
+    }
+
+    function spawnObstacle() {
+      // 6 distinct obstacles:
+      // Jump over: 'log', 'briar', 'puddle', 'fence'
+      // Duck under: 'bird', 'branch'
+      const types = ['log', 'briar', 'puddle', 'fence', 'bird', 'branch'];
+      const type = types[Math.floor(Math.random() * types.length)];
+
+      let obs = {
+        type: type,
+        x: width + 80,
+        passed: false
+      };
+
+      if (type === 'log') {
+        obs.w = 42;
+        obs.h = 30;
+        obs.y = groundY - obs.h;
+      } else if (type === 'briar') {
+        obs.w = 50;
+        obs.h = 28;
+        obs.y = groundY - obs.h;
+      } else if (type === 'puddle') {
+        obs.w = 64;
+        obs.h = 12;
+        obs.y = groundY - 6;
+      } else if (type === 'fence') {
+        obs.w = 34;
+        obs.h = 42;
+        obs.y = groundY - obs.h;
+      } else if (type === 'bird') {
+        // Low flying bird positioned at head height (duck to avoid)
+        obs.w = 44;
+        obs.h = 24;
+        obs.y = groundY - 52;
+      } else if (type === 'branch') {
+        // Background tree with low overhanging branch (duck to avoid)
+        obs.w = 56;
+        obs.h = 30;
+        obs.y = groundY - 56;
+      }
+
+      obstacles.push(obs);
+    }
+
+    function drawStaticBackground() {
+      // Warm cottagecore golden-hour forest sky/mist gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+      skyGrad.addColorStop(0, '#4f6d4a');
+      skyGrad.addColorStop(0.55, '#8aa373');
+      skyGrad.addColorStop(1, '#d8cfa8');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, groundY);
+
+      // Soft sunbeams filtering through canopy
+      ctx.fillStyle = 'rgba(255, 244, 200, 0.12)';
+      ctx.beginPath();
+      ctx.moveTo(width * 0.2, 0);
+      ctx.lineTo(width * 0.45, 0);
+      ctx.lineTo(width * 0.65, groundY);
+      ctx.lineTo(width * 0.1, groundY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Distant woodland hills
+      ctx.fillStyle = '#5c7852';
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      for (let x = 0; x <= width; x += 60) {
+        ctx.lineTo(x, groundY - 65 - Math.sin(x * 0.01) * 25);
+      }
+      ctx.lineTo(width, groundY);
+      ctx.fill();
+
+      // Stationary forest trees & foliage
+      bgDetails.forEach(item => {
+        if (item.type === 'bgTree') {
+          // Trunk
+          ctx.fillStyle = '#4a3525';
+          ctx.fillRect(item.x - item.trunkW / 2, groundY - 190, item.trunkW, 190);
+          // Canopy
+          ctx.fillStyle = item.shade;
+          ctx.beginPath();
+          ctx.arc(item.x, groundY - 195, item.canopyR, 0, Math.PI * 2);
+          ctx.arc(item.x - 30, groundY - 175, item.canopyR * 0.75, 0, Math.PI * 2);
+          ctx.arc(item.x + 30, groundY - 175, item.canopyR * 0.75, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (item.type === 'mushroom') {
+          ctx.save();
+          ctx.translate(item.x, groundY);
+          ctx.scale(item.scale, item.scale);
+          ctx.fillStyle = '#f5ebe0';
+          ctx.fillRect(-4, -14, 8, 14);
+          ctx.fillStyle = '#c14953';
+          ctx.beginPath();
+          ctx.arc(0, -14, 12, Math.PI, 0);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(-4, -18, 2, 0, Math.PI * 2);
+          c.arc(4, -17, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (item.type === 'fern') {
+          ctx.fillStyle = '#3d6336';
+          ctx.beginPath();
+          ctx.ellipse(item.x - 7, groundY - 6, 10, 4, -0.4, 0, Math.PI * 2);
+          ctx.ellipse(item.x + 7, groundY - 6, 10, 4, 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (item.type === 'flowers') {
+          ctx.fillStyle = '#4f772d';
+          ctx.fillRect(item.x - 1, groundY - 10, 2, 10);
+          ctx.fillStyle = item.color;
+          ctx.beginPath();
+          ctx.arc(item.x, groundY - 11, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function drawForestFloor() {
+      // Base rich soil track
+      ctx.fillStyle = '#4b3621';
+      ctx.fillRect(0, groundY, width, height - groundY);
+
+      // Mossy grass top border
+      ctx.fillStyle = '#607c3c';
+      ctx.fillRect(0, groundY, width, 12);
+
+      // Moving floor texture (pebbles, fallen leaves, roots moving left)
+      const spacing = 48;
+      const startX = -(floorOffset % spacing);
+      for (let x = startX; x < width + spacing; x += spacing) {
+        // Grass tuft
+        ctx.fillStyle = '#739347';
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x + 6, groundY - 6);
+        ctx.lineTo(x + 12, groundY);
+        ctx.fill();
+
+        // Soil pebbles & twigs
+        ctx.fillStyle = '#362515';
+        ctx.beginPath();
+        ctx.ellipse(x + 18, groundY + 26, 7, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#6b4f35';
+        ctx.fillRect(x + 32, groundY + 45, 14, 3);
+      }
+    }
+
+    function drawObstacles() {
+      obstacles.forEach(obs => {
+        if (obs.type === 'log') {
+          // Fallen Log (Hop over)
+          ctx.fillStyle = '#5c3a21';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 8);
+          ctx.fill();
+          // Bark lines & end ring
+          ctx.strokeStyle = '#3b2312';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(obs.x + 4, obs.y + 6, obs.w - 16, 4);
+          ctx.fillStyle = '#c89f72';
+          ctx.beginPath();
+          ctx.ellipse(obs.x + obs.w - 7, obs.y + obs.h / 2, 6, obs.h / 2 - 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else if (obs.type === 'briar') {
+          // Thorny Briar Patch (Hop over)
+          ctx.fillStyle = '#2d4726';
+          ctx.beginPath();
+          ctx.arc(obs.x + 12, obs.y + 18, 13, 0, Math.PI * 2);
+          ctx.arc(obs.x + 26, obs.y + 14, 15, 0, Math.PI * 2);
+          ctx.arc(obs.x + 39, obs.y + 19, 12, 0, Math.PI * 2);
+          ctx.fill();
+          // Thorns & berries
+          ctx.fillStyle = '#9e2a2b';
+          ctx.beginPath();
+          ctx.arc(obs.x + 20, obs.y + 12, 3, 0, Math.PI * 2);
+          ctx.arc(obs.x + 33, obs.y + 16, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else if (obs.type === 'puddle') {
+          // Water Puddle (Hop over)
+          ctx.fillStyle = '#5fa8d3';
+          ctx.beginPath();
+          ctx.ellipse(obs.x + obs.w / 2, groundY + 5, obs.w / 2, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#bee9e8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.ellipse(obs.x + obs.w / 2, groundY + 5, obs.w / 3, 4, 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+        } else if (obs.type === 'fence') {
+          // Cottagecore Wooden Picket Fence (Hop over)
+          ctx.fillStyle = '#e6ccb2';
+          // Horizontal rails
+          ctx.fillRect(obs.x, obs.y + 12, obs.w, 5);
+          ctx.fillRect(obs.x, obs.y + 28, obs.w, 5);
+          // Vertical pickets
+          for (let px = obs.x + 2; px < obs.x + obs.w - 4; px += 11) {
+            ctx.beginPath();
+            ctx.moveTo(px, obs.y + obs.h);
+            ctx.lineTo(px, obs.y + 6);
+            ctx.lineTo(px + 4, obs.y);
+            ctx.lineTo(px + 8, obs.y + 6);
+            ctx.lineTo(px + 8, obs.y + obs.h);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+        } else if (obs.type === 'bird') {
+          // Low-Flying Woodland Bird (Duck under)
+          const wingFlap = Math.sin(frameCount * 0.25) * 8;
+          ctx.fillStyle = '#bc4749'; // Robin red-brown
+          ctx.beginPath();
+          ctx.ellipse(obs.x + 22, obs.y + 14, 16, 9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Beak facing left
+          ctx.fillStyle = '#ffb703';
+          ctx.beginPath();
+          ctx.moveTo(obs.x + 6, obs.y + 12);
+          ctx.lineTo(obs.x - 2, obs.y + 15);
+          ctx.lineTo(obs.x + 6, obs.y + 17);
+          ctx.closePath();
+          ctx.fill();
+          // Wing
+          ctx.strokeStyle = '#6a2c2e';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(obs.x + 20, obs.y + 12);
+          ctx.lineTo(obs.x + 28, obs.y + 12 - wingFlap);
+          ctx.stroke();
+
+        } else if (obs.type === 'branch') {
+          // Tree behind track with low overhanging branch (Duck under)
+          // Tree trunk rooted behind the track
+          ctx.fillStyle = '#3f2a1d';
+          ctx.fillRect(obs.x + 36, obs.y - 110, 22, 110 + (groundY - obs.y));
+          // Low overhanging branch extending left across player head height
+          ctx.fillStyle = '#4f3524';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y + 6, 46, 12, 5);
+          ctx.fill();
+          // Leaf cluster hanging from branch
+          ctx.fillStyle = '#588157';
+          ctx.beginPath();
+          ctx.arc(obs.x + 14, obs.y + 12, 13, 0, Math.PI * 2);
+          ctx.arc(obs.x + 28, obs.y + 10, 14, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function update() {
+      frameCount++;
+
+      if (gameState !== 'PLAYING') return;
+
+      // Move floor left & increase speed gradually
+      floorOffset += gameSpeed;
+      gameSpeed += 0.0008;
+
+      // Distance-based score
+      score += gameSpeed * 0.03;
+      document.getElementById('scoreDisplay').textContent = Math.floor(score);
+
+      // Player gravity & jump
+      if (!player.isGrounded) {
+        player.vy += 0.65;
+        player.y += player.vy;
+
+        if (player.y >= groundY - 22) {
+          player.y = groundY - 22;
+          player.vy = 0;
+          player.isGrounded = true;
+        }
+      }
+
+      // Duck timer
+      if (player.isDucking) {
+        player.duckTimer--;
+        if (player.duckTimer <= 0) {
+          player.isDucking = false;
+        }
+      }
+
+      // Nicely spaced obstacle spawning (adjusts with speed so spacing stays fair)
+      nextSpawnTimer--;
+      if (nextSpawnTimer <= 0) {
+        spawnObstacle();
+        const minGap = Math.max(68, 125 - gameSpeed * 4);
+        nextSpawnTimer = minGap + Math.random() * 45;
+      }
+
+      // Move obstacles & check collisions
+      const pHeight = player.isDucking ? player.duckHeight : player.normalHeight;
+      const pBox = {
+        left: player.x - 14,
+        right: player.x + 14,
+        top: (player.y + 22) - pHeight,
+        bottom: player.y + 20
+      };
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.x -= gameSpeed;
+
+        // Forgiving hitbox padding
+        const oBox = {
+          left: obs.x + 5,
+          right: obs.x + obs.w - 5,
+          top: obs.y + 4,
+          bottom: obs.y + obs.h - 2
+        };
+
+        if (
+          pBox.right > oBox.left &&
+          pBox.left < oBox.right &&
+          pBox.bottom > oBox.top &&
+          pBox.top < oBox.bottom
+        ) {
+          endRun();
+          return;
+        }
+
+        if (obs.x + obs.w < -80) {
+          obstacles.splice(i, 1);
+        }
+      }
+    }
+
+    function endRun() {
+      gameState = 'GAMEOVER';
+      const finalDist = Math.floor(score);
+      if (finalDist > bestScore) bestScore = finalDist;
+
+      document.getElementById('finalScore').textContent = finalDist;
+      document.getElementById('bestScoreText').textContent = `Best: ${bestScore}m`;
+      document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, width, height);
+
+      drawStaticBackground();
+      drawForestFloor();
+
+      if (gameState !== 'SELECT') {
+        drawObstacles();
+        const animTick = gameState === 'PLAYING' ? frameCount : 0;
+        drawCharacter(ctx, selectedChar, player.x, player.y, player.isDucking, animTick, player.isGrounded);
+      }
+
+      update();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>

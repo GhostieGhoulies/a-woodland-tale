@@ -1,0 +1,2738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>A Forest Tale</title>
+  <link rel="icon" href="data:,">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background: #2b3a29;
+      overflow: hidden;
+      touch-action: none;
+      font-family: 'Georgia', serif;
+      color: #fdf6e3;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      background: rgba(34, 46, 32, 0.72);
+      backdrop-filter: blur(3px);
+    }
+    h1 {
+      font-size: 38px;
+      color: #f4e4bc;
+      text-shadow: 2px 3px 0px #2d1e12;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    p.subtitle {
+      font-size: 16px;
+      color: #d8c8a8;
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+    .char-grid {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 500px;
+    }
+    .char-card {
+      position: relative;
+      background: #4a3525;
+      border: 3px solid #c9a66b;
+      border-radius: 14px;
+      padding: 14px 16px;
+      width: 135px;
+      cursor: pointer;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+      transition: transform 0.15s;
+    }
+    .char-card:active {
+      transform: scale(0.95);
+    }
+    #partyAppleButton, #prepCarrotButton {
+      position: absolute;
+      top: -3px;
+      left: -60px;
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #partyAppleButton svg { width: 25px; height: 29px; overflow: visible; }
+    #partyAppleButton:hover svg { transform: rotate(-9deg) scale(1.12); }
+    #prepCarrotButton { left: auto; right: -60px; top: 4px; }
+    #prepCarrotButton svg { width: 28px; height: 33px; overflow: visible; }
+    #prepCarrotButton:hover svg { transform: rotate(9deg) scale(1.12); }
+    #partyAppleButton:focus-visible, #prepCarrotButton:focus-visible {
+      outline: 2px solid #ffdc95; outline-offset: 2px;
+    }
+    @media (min-width: 474px) {
+      #partyAppleButton { top: auto; bottom: -52px; left: calc(50% - 22px); }
+      #prepCarrotButton { top: auto; bottom: -52px; right: auto; left: calc(50% + 28px); }
+    }
+    #dancePartyStatus, #workoutSceneStatus {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      z-index: 4;
+      text-align: center;
+      color: #fff4d2;
+      pointer-events: none;
+    }
+    .char-card canvas {
+      width: 80px;
+      height: 70px;
+      margin: 0 auto 8px;
+      display: block;
+    }
+    .char-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffefd5;
+    }
+    .char-species {
+      font-size: 13px;
+      color: #cbb692;
+      margin-top: 2px;
+    }
+    #runHud {
+      position: fixed;
+      right: clamp(12px, 5vw, 60px);
+      left: clamp(12px, 5vw, 60px);
+      bottom: calc(100% - var(--ground-y, 78vh) + 78px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    #scorePanel, #applePanel {
+      width: clamp(168px, 38vw, 220px);
+      box-sizing: border-box;
+      padding: 9px 12px;
+      border: 1px solid rgba(212, 180, 131, 0.65);
+      border-radius: 12px;
+      background: rgba(43, 48, 29, 0.8);
+      z-index: 2;
+      display: none;
+      pointer-events: none;
+      font-size: clamp(14px, 3.6vw, 18px);
+      line-height: 1.4;
+    }
+    #scorePanel { flex-shrink: 0; margin-left: auto; }
+    #applePanel {
+      width: auto;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-weight: bold;
+      color: #fff8e8;
+    }
+    #appleSaveWarning { color: #ffd8a8; font-size: 12px; }
+    .btn.skip-ahead-button { font-size: 16px; padding: 12px 18px; max-width: 100%; }
+    #gameOverScreen { overflow-y: auto; }
+    #endRelaxationButton {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: 16px;
+      z-index: 5;
+      margin: 0;
+      padding: 10px 18px;
+      font-size: 16px;
+    }
+    #hud {
+      font-weight: bold;
+      color: #fdf6e3;
+      text-shadow: 2px 2px 0px #2b1d12;
+      display: none;
+      pointer-events: none;
+    }
+    #carrotHud {
+      display: none;
+      color: #fff8e8;
+      font-size: clamp(14px, 3.6vw, 18px);
+      font-weight: bold;
+      line-height: 1.4;
+      text-shadow: 2px 2px 0 #2b1d12;
+      pointer-events: none;
+    }
+    #companionStatus {
+      margin-top: 4px;
+      color: #f4dda9;
+      font-size: 0.85em;
+      line-height: 1.3;
+    }
+    #invincibleStatus {
+      display: none;
+      color: #fff;
+      font-size: 0.9em;
+    }
+    #instructions {
+      position: absolute;
+      top: 22%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(62, 43, 28, 0.88);
+      border: 2px solid #d4b483;
+      border-radius: 16px;
+      padding: 18px 26px;
+      text-align: center;
+      display: none;
+      pointer-events: none;
+      width: 85%;
+      max-width: 360px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+    }
+    #instructions h2 {
+      font-size: 22px;
+      color: #f4e4bc;
+      margin-bottom: 10px;
+    }
+    #instructions p {
+      font-size: 16px;
+      line-height: 1.5;
+      color: #efe4ce;
+      margin-bottom: 8px;
+    }
+    .tap-prompt {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #ffd166;
+      font-size: 18px;
+      animation: pulse 1.4s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    .btn {
+      margin-top: 18px;
+      padding: 14px 32px;
+      font-size: 20px;
+      font-family: 'Georgia', serif;
+      font-weight: bold;
+      background: #7c9a5e;
+      color: #fffbe9;
+      border: 3px solid #d9e4c8;
+      border-radius: 12px;
+      box-shadow: 0 5px 0 #3f522e;
+      cursor: pointer;
+    }
+    .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #3f522e;
+    }
+    .storyboard {
+      z-index: 5;
+      overflow-y: auto;
+      background: rgba(25, 38, 27, 0.86);
+    }
+    .story-card {
+      width: min(760px, 100%);
+      padding: clamp(18px, 4vw, 32px);
+      background: linear-gradient(145deg, rgba(78, 58, 39, 0.97), rgba(44, 57, 39, 0.97));
+      border: 2px solid #d4b483;
+      border-radius: 24px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+    }
+    .story-kicker {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      color: #d8c8a8;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+    }
+    .story-title {
+      margin-bottom: 8px;
+      font-size: clamp(26px, 5vw, 38px);
+    }
+    .story-copy {
+      max-width: 640px;
+      margin: 0 auto 14px;
+      color: #efe4ce;
+      font-size: clamp(16px, 2.4vw, 19px);
+      line-height: 1.5;
+    }
+    .story-art {
+      width: min(560px, 100%);
+      margin: 0 auto 16px;
+      overflow: hidden;
+      border: 2px solid rgba(223, 200, 154, 0.8);
+      border-radius: 18px;
+      background: #82966a;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+    }
+    .story-art canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .story-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .story-button {
+      min-width: 96px;
+      padding: 10px 16px;
+      border: 2px solid #d9e4c8;
+      border-radius: 12px;
+      background: #7c9a5e;
+      color: #fffbe9;
+      font: bold 16px Georgia, serif;
+      cursor: pointer;
+    }
+    .story-button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .story-progress {
+      color: #f4e4bc;
+      font-size: 15px;
+      letter-spacing: 3px;
+    }
+    .sound-toggle {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      z-index: 10;
+      padding: 9px 13px;
+      border: 2px solid #d4b483;
+      border-radius: 999px;
+      background: rgba(62, 43, 28, 0.92);
+      color: #fff8e8;
+      font: bold 14px Georgia, serif;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    @media (max-width: 480px) {
+      .storyboard {
+        padding: 12px;
+      }
+      .story-card {
+        padding: 18px 14px;
+      }
+      .story-copy {
+        margin-bottom: 12px;
+      }
+      .story-art {
+        margin-bottom: 12px;
+      }
+      .story-button {
+        min-width: 82px;
+        padding: 9px 11px;
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Click-through woodland story before character selection -->
+  <div id="storyboardScreen" class="overlay storyboard">
+    <section class="story-card" aria-labelledby="storyTitle">
+      <div class="story-kicker">
+        <span>A Woodland Tale</span>
+        <span id="storyCounter">1 / 3</span>
+      </div>
+      <h1 id="storyTitle" class="story-title">Once upon a time</h1>
+      <p id="storyText" class="story-copy">Once upon a time, there was a magical forest with woodland critters who loved to run.</p>
+      <div class="story-art">
+        <canvas id="storyArt" width="520" height="260" aria-label="A woodland story illustration"></canvas>
+      </div>
+      <div class="story-nav">
+        <button id="storyBack" class="story-button" type="button" onclick="changeStory(-1)" disabled>Back</button>
+        <span id="storyProgress" class="story-progress">● ○ ○</span>
+        <button id="storyNext" class="story-button" type="button" onclick="changeStory(1)">Next</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Character Selection Screen -->
+  <div id="selectScreen" class="overlay" style="display: none;">
+    <h1>A Forest Tale</h1>
+    <p class="subtitle">Choose your woodland traveler</p>
+    <div class="char-grid">
+      <div class="char-card" onclick="selectCharacter('mac')">
+        <canvas id="previewMac" width="80" height="70"></canvas>
+        <div class="char-name">Mac</div>
+        <div class="char-species">Field Mouse</div>
+      </div>
+      <div class="char-card" onclick="selectCharacter('reggie')">
+        <canvas id="previewReggie" width="80" height="70"></canvas>
+        <div class="char-name">Reggie</div>
+        <div class="char-species">Raccoon</div>
+      </div>
+      <div class="char-card" onclick="selectCharacter('sebal')">
+        <canvas id="previewSebal" width="80" height="70"></canvas>
+        <div class="char-name">Sebastian</div>
+        <div class="char-species">Squirrel</div>
+        <button id="partyAppleButton" type="button" aria-label="Open woodland dance party"
+          onclick="event.stopPropagation(); startDanceParty()" onkeydown="event.stopPropagation()">
+          <svg viewBox="0 0 28 32" aria-hidden="true">
+            <defs>
+              <radialGradient id="partyAppleRed" cx="30%" cy="25%" r="75%">
+                <stop offset="0" stop-color="#ff9694"/><stop offset=".4" stop-color="#f03942"/>
+                <stop offset="1" stop-color="#a50f2d"/>
+              </radialGradient>
+            </defs>
+            <path d="M14 10C5 4 0 13 4 23c3 9 7 6 10 6s7 3 10-6c4-10-1-19-10-13Z" fill="url(#partyAppleRed)"/>
+            <path d="M14 11q-1-7 2-9" fill="none" stroke="#69412b" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M15 7q1-7 9-6-1 7-9 6" fill="#80b958"/>
+            <ellipse cx="8" cy="14" rx="2" ry="3" fill="#fff" opacity=".6" transform="rotate(25 8 14)"/>
+          </svg>
+        </button>
+        <button id="prepCarrotButton" type="button" aria-label="Open finish-line celebration"
+          onclick="event.stopPropagation(); startWarmupScene()" onkeydown="event.stopPropagation()">
+          <svg viewBox="0 0 32 40" aria-hidden="true">
+            <defs>
+              <linearGradient id="prepCarrotOrange" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#ffb34e"/><stop offset="1" stop-color="#eb631d"/>
+              </linearGradient>
+            </defs>
+            <path d="M18 12C9 10 5 24 2 36c-1 3 1 4 3 2 10-8 22-19 17-24Z" fill="url(#prepCarrotOrange)"/>
+            <path d="m12 19 4 3m-9 5 3 2" stroke="#d9611b" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+            <path d="M20 13Q14 4 19 2q5 1 3 10Q22 1 27 1q4 3-4 12Q29 4 31 8q1 4-9 7" fill="#6ca948" stroke="#3f7a35" stroke-width="1"/>
+            <path d="M14 15 6 31" stroke="#ffe7a3" stroke-width="1.5" opacity=".65" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <button id="relaxationModeButton" class="btn" onclick="startRelaxationMode()">relaxation mode</button>
+  </div>
+  <div id="dancePartyStatus" role="status" hidden></div>
+  <div id="workoutSceneStatus" role="status" hidden></div>
+
+  <!-- Floating Instructions before run starts -->
+  <div id="instructions">
+    <h2>How to Play</h2>
+    <p><strong>Tap</strong> to jump over low obstacles</p>
+    <p><strong>Tap again in midair</strong> for extra hang time</p>
+    <p>⬇️ <strong>Swipe Down</strong> to duck under high obstacles</p>
+    <p>✨ Jump into sparkling carrots for <strong>100 points</strong>.</p>
+    <p>Collect 5 carrots for 7 seconds of invincibility.</p>
+    <p>Run 1,000 feet alone to earn a friend who absorbs one hit.</p>
+    <div class="tap-prompt">Tap anywhere to start!</div>
+  </div>
+
+  <!-- Distance / Score HUD -->
+  <div id="runHud">
+  <div id="applePanel">
+    <div>Apples: <span id="appleCount">0</span></div>
+    <div id="appleSaveWarning" role="status"></div>
+  </div>
+  <div id="scorePanel">
+    <div id="hud">Distance: <span id="scoreDisplay">0</span> ft</div>
+    <div id="carrotHud">
+      <div>Carrot count: <span id="carrotCount">0</span> / 5</div>
+      <div>Points: <span id="carrotPointsDisplay">0</span></div>
+      <div id="invincibleStatus"></div>
+    </div>
+    <div id="companionStatus"></div>
+  </div>
+  </div>
+
+  <button id="endRelaxationButton" class="btn" hidden onclick="endRelaxationMode()">end run</button>
+
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen" class="overlay" style="display: none;">
+    <h1>Oh, Bother!</h1>
+    <p class="subtitle" style="font-style: normal; font-size: 20px; margin-bottom: 6px;">
+      You traveled <strong id="finalScore" style="color: #ffd166;">0</strong> feet
+    </p>
+    <p class="subtitle" style="font-style: normal; font-size: 18px; margin-bottom: 6px;">
+      Carrot points: <strong id="finalPoints" style="color: #ffd166;">0</strong>
+    </p>
+    <p class="subtitle" id="bestScoreText" style="margin-bottom: 12px;">Best: 0 ft</p>
+    <p id="appleBalanceText" style="font-size: 16px;"></p>
+    <button id="resetBestScoreButton" class="btn" type="button" style="background: #6b4e38; border-color: #c9a66b; box-shadow: 0 5px 0 #3b281a; font-size: 15px; padding: 10px 20px; margin-top: 0;" onclick="resetBestScore()">Reset Best Distance</button>
+    <button class="btn" onclick="prepareRun()">Try Again</button>
+    <button id="skipAheadButton" class="btn skip-ahead-button" hidden disabled onclick="spendApplesToSkip()">Use 10 apples to skip ahead to 750 feet</button>
+    <button id="skipAhead1250Button" class="btn skip-ahead-button" hidden disabled onclick="spendApplesToSkip(1250)">Use 15 apples to skip ahead to 1,250 feet</button>
+    <button id="resumeRunButton" class="btn skip-ahead-button" hidden disabled onclick="spendApplesToResume()">Use 20 apples to resume your last run</button>
+    <button class="btn" style="background: #6b4e38; border-color: #c9a66b; box-shadow: 0 5px 0 #3b281a; font-size: 15px; padding: 10px 20px; margin-top: 12px;" onclick="returnToSelect()">Change Character</button>
+  </div>
+
+  <button id="soundToggle" class="sound-toggle" type="button" onclick="toggleSound()" aria-pressed="true">Sound: On</button>
+
+  <script src="dance-party.js"></script>
+  <script src="warmup-scene.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    let ctx = canvas.getContext('2d');
+    const staticBackgroundCanvas = document.createElement('canvas');
+    const staticBackgroundCtx = staticBackgroundCanvas.getContext('2d');
+    let staticBackgroundDirty = true;
+
+    let width, height, groundY;
+    function resize() {
+      const previousGroundY = groundY;
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      staticBackgroundCanvas.width = width;
+      staticBackgroundCanvas.height = height;
+      staticBackgroundDirty = true;
+      groundY = Math.floor(height * 0.78);
+      document.documentElement.style.setProperty('--ground-y', `${groundY}px`);
+      if (Number.isFinite(previousGroundY)) {
+        const groundShift = groundY - previousGroundY;
+        player.y += groundShift;
+        obstacles.forEach(obstacle => { obstacle.y += groundShift; });
+        carrots.forEach(carrot => { carrot.y += groundShift; });
+        generateStaticForest();
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Game States: 'STORY', 'SELECT', 'READY', 'PLAYING', 'GAMEOVER'
+    let gameState = 'STORY';
+    const DANCE_PARTY_DURATION_MS = 10000;
+    let dancePartyStartedAt = 0;
+    let dancePartyTimer = null;
+    const WARMUP_DURATION_MS = 10000;
+    let warmupStartedAt = 0;
+    let warmupTimer = null;
+    let storySlideIndex = 0;
+    let selectedChar = 'mac';
+    let runMode = 'normal';
+    let relaxationFollowers = [];
+    let distanceFeet = 0;
+    const INITIAL_GAME_SPEED = 3.5;
+    let gameSpeed = INITIAL_GAME_SPEED;
+    const BEST_SCORE_STORAGE_KEY = 'bestDistanceFeet';
+    function loadBestScore() {
+      try {
+        const savedScore = Number(localStorage.getItem(BEST_SCORE_STORAGE_KEY));
+        return Number.isFinite(savedScore) && savedScore >= 0 ? Math.floor(savedScore) : 0;
+      } catch (error) {
+        console.warn('Unable to load the saved best distance.', error);
+        return 0;
+      }
+    }
+    let bestScoreFeet = loadBestScore();
+    let nextSpeedUpAt = 300;
+    let frameCount = 0;
+    let floorOffset = 0;
+    const METERS_TO_FEET = 3.28084;
+    const SPEED_UP_INTERVAL_FEET = 300;
+    const SPEED_UP_MULTIPLIER = 1.1;
+    const GRAVITY = 0.3;
+    const MAX_JUMP_HEIGHT = 54;
+    const JUMP_DURATION_FRAMES = 63;
+    const JUMP_ASCENT_FRACTION = 1 / 3; // Same quick 21-frame rise; slower 42-frame descent.
+    const DUCK_DURATION_FRAMES = 72;
+    const JUMP_VELOCITY = -5.41;
+    const AIR_HANG_EXTENSION_FRAMES = JUMP_DURATION_FRAMES;
+    const CARROT_POINTS = 100;
+    const CARROTS_FOR_INVINCIBILITY = 5;
+    const INVINCIBILITY_DURATION_MS = 7000;
+    const COMPANION_SOLO_FEET = 1000;
+    const COMPANION_FOLLOW_GAP = 50;
+    const APPLE_STORAGE_KEY = 'forestAppleBalance';
+    const APPLE_GENERATION_RATE = 0.23;
+    const APPLE_MIN_GAP_FEET = 30 / APPLE_GENERATION_RATE;
+    const APPLE_MAX_GAP_FEET = 100 / APPLE_GENERATION_RATE;
+    const APPLE_SKIP_OPTIONS = [
+      { feet: 750, cost: 10, buttonId: 'skipAheadButton' },
+      { feet: 1250, cost: 15, buttonId: 'skipAhead1250Button' }
+    ];
+    const GREEN_APPLE_INTERVAL_FEET = 500;
+    let appleSavingAvailable = true;
+    let appleBalance = loadAppleBalance();
+    let apples = [];
+    let nextAppleAtFeet = 0;
+    let nextGreenAppleAtFeet = GREEN_APPLE_INTERVAL_FEET;
+    const FIRST_CARROT_MIN_FEET = 90;
+    const FIRST_CARROT_RANGE_FEET = 70;
+    const CARROT_GAP_MIN_FEET = 120;
+    const CARROT_GAP_RANGE_FEET = 120;
+
+    let carrotCount = 0;
+    let carrotPoints = 0;
+    let invincibleUntil = 0;
+    let resumeProtection = false;
+    let lastRunSnapshot = null;
+    let nextCarrotAtFeet = 0;
+    let audioContext = null;
+    let audioMaster = null;
+    let ambienceBus = null;
+    let musicBus = null;
+    let effectsBus = null;
+    let ambienceNoise = null;
+    let backgroundMusic = null;
+    let partyMusic = null;
+    let partyMusicPlayPending = false;
+    let workoutMusic = null;
+    let workoutMusicPlayPending = false;
+    let crowdCheering = null;
+    let crowdCheeringGain = null;
+    let crowdCheeringPlayPending = false;
+    let musicPlayPending = false;
+    let musicUnavailable = false;
+    let birdsTimer = null;
+    let audioMuted = false;
+    let audioUnavailable = false;
+    let noiseBuffer = null;
+    let effectsNoiseBuffer = null;
+    let haloVoice = null;
+    const collisionSoundBuffers = new Map();
+    let logImpactBus = null;
+    let companion = null;
+    let soloStartFeet = 0;
+    let trailDistance = 0;
+    let playerTrail = [];
+
+    // Player physics & animation state
+    const player = {
+      x: 90,
+      y: 0,
+      vy: 0,
+      width: 44,
+      normalHeight: 46,
+      duckHeight: 24,
+      isGrounded: true,
+      isDucking: false,
+      duckTimer: 0,
+      hasExtendedJump: false,
+      airHangFrames: 0,
+      jumpProgress: 0,
+      jumpStep: 1 / JUMP_DURATION_FRAMES
+    };
+
+    let obstacles = [];
+    let carrots = [];
+    let nextSpawnTimer = 90;
+
+    function loadAppleBalance() {
+      try {
+        const stored = localStorage.getItem(APPLE_STORAGE_KEY);
+        const value = stored === null ? 0 : Number(stored);
+        return Number.isSafeInteger(value) && value >= 0 ? value : 0;
+      } catch (error) {
+        appleSavingAvailable = false;
+        console.warn('Unable to load the apple bank.', error);
+        return 0;
+      }
+    }
+
+    function updateAppleHud() {
+      document.getElementById('appleCount').textContent = appleBalance.toLocaleString('en-US');
+      document.getElementById('appleSaveWarning').textContent =
+        appleSavingAvailable ? '' : 'Saving unavailable on this device';
+      document.getElementById('appleBalanceText').textContent =
+        `Apple balance: ${appleBalance.toLocaleString('en-US')}` +
+        (appleSavingAvailable ? '' : ' (not saved on this device)');
+      APPLE_SKIP_OPTIONS.forEach(option => {
+        const button = document.getElementById(option.buttonId);
+        const canSpend = gameState === 'GAMEOVER' && appleBalance >= option.cost;
+        button.hidden = !canSpend;
+        button.disabled = !canSpend;
+      });
+      const resumeButton = document.getElementById('resumeRunButton');
+      const canResume = gameState === 'GAMEOVER' && !!lastRunSnapshot && appleBalance >= 20;
+      resumeButton.hidden = !canResume;
+      resumeButton.disabled = !canResume;
+    }
+
+    function setAppleBalance(value) {
+      appleBalance = value;
+      try {
+        localStorage.setItem(APPLE_STORAGE_KEY, String(appleBalance));
+        appleSavingAvailable = true;
+      } catch (error) {
+        appleSavingAvailable = false;
+        console.warn('Unable to save the apple bank.', error);
+      }
+      updateAppleHud();
+    }
+
+    function collectApple(value = 1) {
+      if (runMode === 'relaxation') return;
+      setAppleBalance(Math.min(Number.MAX_SAFE_INTEGER, appleBalance + value));
+      startAudio();
+      playTone(1318.51, 1318.51, 0.32, 0.3, 'sine');
+      playTone(2637.02, 2637.02, 0.2, 0.1, 'sine');
+    }
+
+    function spendApplesToSkip(startFeet = 750) {
+      const option = APPLE_SKIP_OPTIONS.find(option => option.feet === startFeet);
+      if (!option || gameState !== 'GAMEOVER') return;
+      // Recheck persisted funds in case another tab has spent apples.
+      if (appleSavingAvailable) appleBalance = loadAppleBalance();
+      if (appleBalance < option.cost) {
+        updateAppleHud();
+        return;
+      }
+      setAppleBalance(appleBalance - option.cost);
+      prepareRun(option.feet);
+      startRun();
+    }
+
+    function spendApplesToResume() {
+      if (gameState !== 'GAMEOVER' || !lastRunSnapshot) return;
+      if (appleSavingAvailable) appleBalance = loadAppleBalance();
+      if (appleBalance < 20) {
+        updateAppleHud();
+        return;
+      }
+      const saved = lastRunSnapshot;
+      setAppleBalance(appleBalance - 20);
+      prepareRun(saved.distanceFeet);
+      selectedChar = saved.character;
+      gameSpeed = saved.gameSpeed;
+      nextSpeedUpAt = saved.nextSpeedUpAt;
+      carrotCount = saved.carrotCount;
+      carrotPoints = saved.carrotPoints;
+      soloStartFeet = saved.soloStartFeet;
+      companion = saved.companion ? structuredClone(saved.companion) : null;
+      if (companion) companion.pose = { lift: 0, ducking: false, grounded: true };
+      resumeProtection = true;
+      invincibleUntil = performance.now() + 3500;
+      updateCarrotHud();
+      updateCompanionHud();
+      startRun();
+    }
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === APPLE_STORAGE_KEY || event.key === null) {
+        appleBalance = loadAppleBalance();
+        updateAppleHud();
+      }
+    });
+
+    function randomAppleGap() {
+      return APPLE_MIN_GAP_FEET + Math.random() * (APPLE_MAX_GAP_FEET - APPLE_MIN_GAP_FEET);
+    }
+
+    function populateApples() {
+      if (runMode === 'relaxation') return;
+      const feetPerPixel = 0.03 * METERS_TO_FEET;
+      const horizon = distanceFeet + (width + 320 - player.x) * feetPerPixel;
+      while (nextAppleAtFeet <= horizon) {
+        apples.push({
+          kind: 'red',
+          atFeet: nextAppleAtFeet,
+          x: player.x + (nextAppleAtFeet - distanceFeet) / feetPerPixel
+        });
+        nextAppleAtFeet += randomAppleGap();
+      }
+      while (nextGreenAppleAtFeet <= horizon) {
+        apples.push({ kind: 'green', atFeet: nextGreenAppleAtFeet, x: 0 });
+        nextGreenAppleAtFeet += GREEN_APPLE_INTERVAL_FEET;
+      }
+      apples.forEach(apple => {
+        apple.x = player.x + (apple.atFeet - distanceFeet) / feetPerPixel;
+      });
+    }
+
+    function drawApples() {
+      apples.forEach(apple => {
+        const x = apple.x;
+        const y = groundY - 13;
+        ctx.save();
+        const skin = ctx.createRadialGradient(x - 5, y - 5, 1, x, y, 14);
+        const green = apple.kind === 'green';
+        skin.addColorStop(0, green ? '#d9f789' : '#ff8572');
+        skin.addColorStop(0.4, green ? '#86c737' : '#ef3939');
+        skin.addColorStop(1, green ? '#387d24' : '#9e172b');
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 8);
+        ctx.bezierCurveTo(x - 20, y - 18, x - 17, y + 15, x, y + 11);
+        ctx.bezierCurveTo(x + 17, y + 15, x + 20, y - 18, x, y - 8);
+        ctx.fill();
+        ctx.strokeStyle = '#67402b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 8);
+        ctx.quadraticCurveTo(x - 1, y - 14, x + 3, y - 17);
+        ctx.stroke();
+        ctx.fillStyle = '#91b85f';
+        ctx.beginPath();
+        ctx.ellipse(x + 6, y - 14, 6, 3, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.ellipse(x - 6, y - 4, 2.5, 4, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function updateSoundToggle() {
+      const button = document.getElementById('soundToggle');
+      if (!button) return;
+      button.textContent = audioUnavailable ? 'Sound unavailable' : `Sound: ${audioMuted ? 'Off' : 'On'}`;
+      button.setAttribute('aria-pressed', String(!audioMuted && !audioUnavailable));
+      button.disabled = audioUnavailable;
+      button.title = musicUnavailable
+        ? 'Background music unavailable. Forest sounds and effects are still available.'
+        : 'Toggle music, forest ambience, and sound effects';
+    }
+
+    function initializeAudio() {
+      if (audioContext) return true;
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        audioUnavailable = true;
+        updateSoundToggle();
+        return false;
+      }
+
+      // Safari otherwise uses the ambient/ringer channel for Web Audio,
+      // which can be silent even while media playback remains audible.
+      if (navigator.audioSession) {
+        try {
+          navigator.audioSession.type = 'playback';
+        } catch (error) {
+          console.warn('Unable to select the playback audio channel.', error);
+        }
+      }
+      audioContext = new AudioContextClass();
+      audioMaster = audioContext.createGain();
+      audioMaster.gain.value = audioMuted ? 0 : 0.42;
+      audioMaster.connect(audioContext.destination);
+
+      ambienceBus = audioContext.createGain();
+      ambienceBus.gain.value = 0.65;
+      ambienceBus.connect(audioMaster);
+      musicBus = audioContext.createGain();
+      musicBus.gain.value = 0.65;
+      musicBus.connect(audioMaster);
+      effectsBus = audioContext.createGain();
+      effectsBus.gain.value = 0.9;
+      effectsBus.connect(audioMaster);
+
+      const noiseLength = Math.floor(audioContext.sampleRate * 2.5);
+      noiseBuffer = audioContext.createBuffer(1, noiseLength, audioContext.sampleRate);
+      const noiseData = noiseBuffer.getChannelData(0);
+      let brownNoise = 0;
+      for (let i = 0; i < noiseLength; i++) {
+        brownNoise = (brownNoise + 0.02 * (Math.random() * 2 - 1)) * 0.98;
+        noiseData[i] = brownNoise * 3;
+      }
+      // Bright, full-spectrum noise for audible water and movement effects.
+      // The low-frequency forest wind buffer muffled these effects.
+      effectsNoiseBuffer = audioContext.createBuffer(1, noiseLength, audioContext.sampleRate);
+      const effectsData = effectsNoiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseLength; i++) effectsData[i] = Math.random() * 2 - 1;
+
+      const wind = audioContext.createBufferSource();
+      wind.buffer = noiseBuffer;
+      wind.loop = true;
+      const windFilter = audioContext.createBiquadFilter();
+      windFilter.type = 'lowpass';
+      windFilter.frequency.value = 620;
+      const windGain = audioContext.createGain();
+      windGain.gain.value = 0.4;
+      wind.connect(windFilter).connect(windGain).connect(ambienceBus);
+      wind.start();
+      ambienceNoise = wind;
+
+      // A single looping instrumental shares the master volume/mute with
+      // ambience and effects. Stream it rather than decoding on the game loop.
+      backgroundMusic = new Audio('attached_assets/generated_audio/fairycore-woodland.mp3');
+      backgroundMusic.loop = true;
+      backgroundMusic.preload = 'auto';
+      backgroundMusic.addEventListener('error', () => {
+        musicUnavailable = true;
+        console.error('The woodland instrumental could not be loaded.', backgroundMusic.error);
+        updateSoundToggle();
+      });
+      const musicSource = audioContext.createMediaElementSource(backgroundMusic);
+      musicSource.connect(musicBus);
+      partyMusic = new Audio('attached_assets/generated_audio/woodland-disco.mp3');
+      partyMusic.preload = 'auto';
+      partyMusic.addEventListener('error', () => {
+        console.error('The woodland disco music could not be loaded.', partyMusic.error);
+        if (gameState === 'DANCE') showPartyMusicError();
+      });
+      audioContext.createMediaElementSource(partyMusic).connect(musicBus);
+      workoutMusic = new Audio('attached_assets/generated_audio/woodland-workout.mp3');
+      workoutMusic.preload = 'auto';
+      workoutMusic.addEventListener('error', () => {
+        console.error('The woodland workout music could not be loaded.', workoutMusic.error);
+        if (gameState === 'WARMUP') showWorkoutMusicError();
+      });
+      audioContext.createMediaElementSource(workoutMusic).connect(musicBus);
+      crowdCheering = new Audio('attached_assets/generated_audio/finish-line-cheers.mp3');
+      crowdCheering.preload = 'auto';
+      crowdCheering.addEventListener('error', () => {
+        console.error('The finish-line cheering could not be loaded.', crowdCheering.error);
+        if (gameState === 'WARMUP') showWorkoutMusicError();
+      });
+      crowdCheeringGain = audioContext.createGain();
+      crowdCheeringGain.gain.value = 0.5;
+      audioContext.createMediaElementSource(crowdCheering).connect(crowdCheeringGain);
+      crowdCheeringGain.connect(musicBus);
+      birdsTimer = window.setInterval(() => {
+        if (!audioMuted) playForestChirp();
+      }, 6800);
+      if (audioContext.state !== 'running') audioContext.resume().catch(() => {});
+      updateSoundToggle();
+      return true;
+    }
+
+    function startAudio() {
+      if (audioMuted || !initializeAudio()) return;
+      audioMaster.gain.setTargetAtTime(0.42, audioContext.currentTime, 0.12);
+      if (audioContext.state !== 'running') audioContext.resume().catch(() => {});
+      if (gameState === 'DANCE') {
+        if (backgroundMusic) backgroundMusic.pause();
+        if (workoutMusic) workoutMusic.pause();
+        if (crowdCheering) crowdCheering.pause();
+        ambienceBus.gain.setValueAtTime(0, audioContext.currentTime);
+        startPartyMusic();
+      } else if (gameState === 'WARMUP') {
+        if (backgroundMusic) backgroundMusic.pause();
+        if (partyMusic) partyMusic.pause();
+        ambienceBus.gain.setValueAtTime(0, audioContext.currentTime);
+        document.getElementById('workoutSceneStatus').hidden = true;
+        startWorkoutMusic();
+        startCrowdCheering();
+      } else {
+        startBackgroundMusic();
+        startHaloSound();
+      }
+    }
+
+    function showPartyMusicError() {
+      const status = document.getElementById('dancePartyStatus');
+      status.textContent = 'Party music could not play. Tap Sound to retry.';
+      status.hidden = false;
+    }
+
+    function startPartyMusic() {
+      if (!partyMusic || audioMuted || !partyMusic.paused || partyMusicPlayPending) return;
+      if (partyMusic.readyState > 0) {
+        partyMusic.currentTime = Math.min(9.9, (performance.now() - dancePartyStartedAt) / 1000);
+      }
+      partyMusicPlayPending = true;
+      partyMusic.play().then(() => {
+        if (gameState !== 'DANCE') partyMusic.pause();
+        else document.getElementById('dancePartyStatus').hidden = true;
+      }).catch(error => {
+        console.warn('Disco music playback was blocked.', error);
+        if (gameState === 'DANCE') showPartyMusicError();
+      }).finally(() => { partyMusicPlayPending = false; });
+    }
+
+    function showWorkoutMusicError() {
+      const status = document.getElementById('workoutSceneStatus');
+      status.textContent = 'Celebration audio could not play. Tap Sound to retry.';
+      status.hidden = false;
+    }
+
+    function startWorkoutMusic() {
+      if (!workoutMusic || audioMuted || !workoutMusic.paused || workoutMusicPlayPending) return;
+      if (workoutMusic.readyState > 0) {
+        workoutMusic.currentTime = Math.min(9.9, (performance.now() - warmupStartedAt) / 1000);
+      }
+      workoutMusicPlayPending = true;
+      workoutMusic.play().then(() => {
+        if (gameState !== 'WARMUP') workoutMusic.pause();
+      }).catch(error => {
+        console.warn('Workout music playback was blocked.', error);
+        if (gameState === 'WARMUP') showWorkoutMusicError();
+      }).finally(() => { workoutMusicPlayPending = false; });
+    }
+
+    function startCrowdCheering() {
+      if (!crowdCheering || audioMuted || !crowdCheering.paused || crowdCheeringPlayPending) return;
+      if (crowdCheering.readyState > 0) {
+        crowdCheering.currentTime = Math.min(9.9, (performance.now() - warmupStartedAt) / 1000);
+      }
+      crowdCheeringPlayPending = true;
+      crowdCheering.play().then(() => {
+        if (gameState !== 'WARMUP') crowdCheering.pause();
+      }).catch(error => {
+        console.warn('Finish-line cheering playback was blocked.', error);
+        if (gameState === 'WARMUP') showWorkoutMusicError();
+      }).finally(() => { crowdCheeringPlayPending = false; });
+    }
+
+    function startHaloSound() {
+      if (!audioContext || audioMuted || !isInvincible()) return;
+      const now = audioContext.currentTime;
+      const duration = (invincibleUntil - performance.now()) / 1000;
+      if (duration <= 0) return;
+      if (haloVoice) {
+        if (haloVoice.expiresAt === invincibleUntil) return;
+        // Extend the current chord rather than layering or restarting it.
+        const { gain, nodes } = haloVoice;
+        if (gain.gain.cancelAndHoldAtTime) gain.gain.cancelAndHoldAtTime(now);
+        else {
+          gain.gain.cancelScheduledValues(now);
+          gain.gain.setValueAtTime(0.18, now);
+        }
+        gain.gain.linearRampToValueAtTime(0.18, now + Math.min(0.04, duration / 3));
+        gain.gain.setValueAtTime(0.18, now + Math.max(duration / 3, duration - 0.25));
+        gain.gain.linearRampToValueAtTime(0, now + duration);
+        nodes.forEach(node => node.stop(now + duration));
+        haloVoice.expiresAt = invincibleUntil;
+        return;
+      }
+      const gain = audioContext.createGain();
+      gain.connect(effectsBus);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + Math.min(0.25, duration / 3));
+      gain.gain.setValueAtTime(0.18, now + Math.max(duration / 3, duration - 0.25));
+      gain.gain.linearRampToValueAtTime(0, now + duration);
+      const nodes = [523.25, 659.25, 783.99, 1046.5].map((frequency, index) => {
+        const tone = audioContext.createOscillator();
+        tone.type = 'sine';
+        tone.frequency.value = frequency;
+        tone.detune.value = index % 2 ? 3 : -3;
+        tone.connect(gain);
+        tone.start(now);
+        tone.stop(now + duration);
+        return tone;
+      });
+      const voice = { gain, nodes, expiresAt: invincibleUntil };
+      haloVoice = voice;
+      nodes[nodes.length - 1].onended = () => {
+        nodes.forEach(node => node.disconnect());
+        gain.disconnect();
+        if (haloVoice === voice) haloVoice = null;
+      };
+    }
+
+    function stopHaloSound() {
+      if (!haloVoice || !audioContext) return;
+      const { gain, nodes } = haloVoice;
+      haloVoice = null;
+      const now = audioContext.currentTime;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setTargetAtTime(0, now, 0.008);
+      nodes.forEach(node => node.stop(now + 0.03));
+    }
+
+    function toggleSound() {
+      audioMuted = !audioMuted;
+      if (audioMuted && audioContext) {
+        audioMaster.gain.setTargetAtTime(0, audioContext.currentTime, 0.06);
+      } else if (!audioMuted) {
+        startAudio();
+      }
+      updateSoundToggle();
+    }
+
+    function playTone(startFrequency, endFrequency, duration, volume, type = 'sine', bus = effectsBus) {
+      if (!audioContext || audioMuted) return;
+      const now = audioContext.currentTime;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(startFrequency, now);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), now + duration);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      oscillator.connect(gain).connect(bus);
+      oscillator.start(now);
+      oscillator.stop(now + duration + 0.02);
+    }
+
+    function playNoiseSweep(startFrequency, endFrequency, duration, volume, bus = effectsBus) {
+      if (!audioContext || !noiseBuffer || audioMuted) return;
+      const now = audioContext.currentTime;
+      const source = audioContext.createBufferSource();
+      const filter = audioContext.createBiquadFilter();
+      const gain = audioContext.createGain();
+      source.buffer = effectsNoiseBuffer;
+      filter.type = 'bandpass';
+      filter.Q.value = 0.9;
+      filter.frequency.setValueAtTime(startFrequency, now);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(40, endFrequency), now + duration);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      source.connect(filter).connect(gain).connect(bus);
+      source.start(now);
+      source.stop(now + duration + 0.03);
+    }
+
+    function playForestChirp() {
+      playTone(1950, 2600, 0.16, 0.045, 'sine', ambienceBus);
+      window.setTimeout(() => playTone(2550, 2050, 0.2, 0.035, 'sine', ambienceBus), 150);
+    }
+
+    function startBackgroundMusic() {
+      if (!backgroundMusic || musicUnavailable || audioMuted ||
+          !backgroundMusic.paused || musicPlayPending) return;
+      musicPlayPending = true;
+      // Start on the same gesture that unlocks sound, including on phones.
+      // A blocked autoplay attempt can be retried on the next gesture.
+      backgroundMusic.play().catch(error => {
+        console.warn('Background music playback was blocked; tap Sound to retry.', error);
+      }).finally(() => { musicPlayPending = false; });
+    }
+
+    function playJumpSound() {
+      startAudio();
+      playNoiseSweep(1450, 280, 0.24, 0.22);
+      playTone(420, 145, 0.2, 0.12, 'sine');
+    }
+
+    function playDuckSound() {
+      startAudio();
+      playTone(190, 72, 0.19, 0.3, 'triangle');
+      playNoiseSweep(620, 180, 0.13, 0.16);
+    }
+
+    function playThudSound() {
+      startAudio();
+      if (!audioContext || audioMuted) return;
+      if (!logImpactBus || logImpactBus.context !== audioContext) {
+        logImpactBus = audioContext.createGain();
+        // Match the other impacts' loudest 100 ms without changing the thud.
+        logImpactBus.gain.value = 2.47;
+        logImpactBus.connect(effectsBus);
+      }
+      playTone(105, 42, 0.24, 0.38, 'sine', logImpactBus);
+      playNoiseSweep(330, 75, 0.15, 0.2, logImpactBus);
+    }
+
+    function playSplashSound() {
+      return playCollisionEffect('puddle');
+    }
+
+    function collisionSoundBuffer(kind) {
+      if (collisionSoundBuffers.has(kind)) return collisionSoundBuffers.get(kind);
+      const duration = kind === 'puddle' ? 0.72 : kind === 'leaves' ? 0.58 : kind === 'bird' ? 0.48 : 0.3;
+      const buffer = audioContext.createBuffer(1, Math.ceil(audioContext.sampleRate * duration), audioContext.sampleRate);
+      const samples = buffer.getChannelData(0);
+      // Local deterministic noise must not consume the game's random sequence.
+      let seed = 47291;
+      let lowNoise = 0;
+      let phase = 0;
+      for (let i = 0; i < samples.length; i++) {
+        const t = i / buffer.sampleRate;
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        const noise = seed / 2147483648 - 1;
+        lowNoise += 0.16 * (noise - lowNoise);
+        const brightNoise = noise - lowNoise;
+        let value;
+        if (kind === 'leaves') {
+          const thud = Math.sin(2 * Math.PI * (115 * t - 90 * t * t)) * Math.exp(-t * 19);
+          const rustle = brightNoise * (0.55 + 0.45 * Math.sin(t * 76) ** 2) *
+            Math.exp(-t * 5) * (1 - Math.exp(-t * 95));
+          value = thud * 0.7 + rustle * 0.85;
+        } else if (kind === 'puddle') {
+          const splash = brightNoise * Math.exp(-t * 5) * (1 - Math.exp(-t * 170));
+          // Falling, bubbling droplets after the initial splash.
+          const droplets = Math.sin(2 * Math.PI * (880 * t - 390 * t * t)) *
+            Math.sin(t * 63) ** 8 * Math.exp(-t * 4) * (1 - Math.exp(-t * 20));
+          value = splash + droplets * 0.55 + lowNoise * Math.exp(-t * 9) * 0.5;
+        } else if (kind === 'bird') {
+          const frequency = 560 + 240 * Math.sin(Math.PI * t / duration) + 55 * Math.sin(t * 89);
+          phase += 2 * Math.PI * frequency / buffer.sampleRate;
+          const voice = Math.sin(phase + 1.9 * Math.sin(phase * 2)) +
+            0.3 * Math.sin(phase * 3) + brightNoise * 0.2;
+          value = voice * Math.sin(Math.PI * t / duration) ** 0.7 *
+            (0.65 + 0.35 * Math.sin(t * 49) ** 2);
+        } else {
+          // Short wooden impact with two resonant board frequencies.
+          value = (Math.sin(2 * Math.PI * 185 * t) * 0.65 +
+            Math.sin(2 * Math.PI * 370 * t) * 0.35) * Math.exp(-t * 22) +
+            brightNoise * Math.exp(-t * 95) * 0.65;
+        }
+        const edgeFade = Math.min(1, t / 0.003, (duration - t) / 0.025);
+        samples[i] = Math.tanh(value * 1.3) * Math.max(0, edgeFade);
+      }
+      // Match the loudest 100 ms to the existing immunity chord's RMS:
+      // four sine voices at gain 0.18. Keep the same effects/master routing.
+      const windowSize = Math.floor(buffer.sampleRate * 0.1);
+      let maxRms = 0;
+      let peak = 0;
+      for (let offset = 0; offset < samples.length; offset += windowSize) {
+        let energy = 0;
+        for (let i = offset; i < Math.min(samples.length, offset + windowSize); i++) {
+          energy += samples[i] * samples[i];
+          peak = Math.max(peak, Math.abs(samples[i]));
+        }
+        maxRms = Math.max(maxRms, Math.sqrt(energy / windowSize));
+      }
+      const scale = Math.min(0.18 * Math.sqrt(2) / Math.max(0.0001, maxRms), 0.98 / Math.max(0.0001, peak));
+      for (let i = 0; i < samples.length; i++) samples[i] *= scale;
+      collisionSoundBuffers.set(kind, buffer);
+      return buffer;
+    }
+
+    function playCollisionEffect(kind) {
+      startAudio();
+      if (!audioContext || audioMuted) return;
+      const context = audioContext;
+      const buffer = collisionSoundBuffer(kind);
+      const play = () => {
+        if (audioMuted || context.state === 'closed') return;
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(effectsBus);
+        source.onended = () => source.disconnect();
+        source.start(context.currentTime);
+      };
+      if (context.state === 'running') return play();
+      // An interrupted/suspended mobile context must resume before a short
+      // impact is scheduled; otherwise the sound can be missed on recovery.
+      return context.resume().then(play).catch(error => {
+        console.warn('Obstacle sound could not resume. Tap Sound to retry.', error);
+      });
+    }
+
+    function playObstacleContactSound(type) {
+      if (type === 'branch' || type === 'briar') return playCollisionEffect('leaves');
+      if (type === 'puddle') return playSplashSound();
+      if (type === 'fence') return playCollisionEffect('wood');
+      if (type === 'bird') return playCollisionEffect('bird');
+      return playThudSound(); // Preserve the fallen log's existing sound.
+    }
+
+    // Generate static cottagecore background details once per screen size
+    let bgDetails = [];
+    function generateStaticForest() {
+      bgDetails = [];
+      staticBackgroundDirty = true;
+      // Distant soft trees
+      for (let x = 20; x < width + 100; x += 95) {
+        bgDetails.push({
+          type: 'bgTree',
+          x: x + (Math.random() * 30 - 15),
+          trunkW: 24 + Math.random() * 14,
+          canopyR: 55 + Math.random() * 25,
+          shade: Math.random() > 0.5 ? '#3b5335' : '#46613e'
+        });
+      }
+      // Cottagecore mushrooms, ferns, and wildflowers along the background edge
+      for (let x = 15; x < width; x += 55) {
+        const roll = Math.random();
+        if (roll < 0.35) {
+          bgDetails.push({ type: 'mushroom', x: x + Math.random() * 20, scale: 0.7 + Math.random() * 0.5 });
+        } else if (roll < 0.75) {
+          bgDetails.push({ type: 'fern', x: x + Math.random() * 20, scale: 0.8 + Math.random() * 0.4 });
+        } else {
+          bgDetails.push({ type: 'flowers', x: x + Math.random() * 20, color: Math.random() > 0.5 ? '#f7d060' : '#f4978e' });
+        }
+      }
+    }
+    generateStaticForest();
+    window.addEventListener('resize', generateStaticForest);
+
+    // Draw Character Function (Side profile facing right)
+    function drawCharacter(c, type, x, y, isDucking, runCycle, isGrounded) {
+      c.save();
+      c.translate(x, y);
+
+      const legSwing = isGrounded ? Math.sin(runCycle * 0.28) * 7 : 5;
+      const bob = isGrounded && !isDucking ? Math.abs(Math.sin(runCycle * 0.28)) * 3 : 0;
+
+      if (isDucking) {
+        c.translate(0, 20);
+        c.scale(1.15, 0.58);
+      } else {
+        c.translate(0, -bob);
+      }
+
+      if (type === 'mac') {
+        // MAC THE MOUSE
+        // Soft, rounded tail
+        c.strokeStyle = '#e5989b';
+        c.lineWidth = 3.5;
+        c.lineCap = 'round';
+        c.beginPath();
+        c.moveTo(-16, 12);
+        c.quadraticCurveTo(-31, 3 + Math.sin(runCycle * 0.2) * 4, -38, 12);
+        c.stroke();
+
+        // Back paw and plush body
+        c.fillStyle = '#8d7b68';
+        c.beginPath();
+        c.ellipse(-6 - legSwing, 18, 6, 4, 0, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#a4907c';
+        c.beginPath();
+        c.ellipse(0, 6, 18, 14, -0.08, 0, Math.PI * 2);
+        c.fill();
+
+        // Cream tummy and cozy green scarf
+        c.fillStyle = '#eadcc5';
+        c.beginPath();
+        c.ellipse(6, 10, 8, 8, 0.2, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#6a994e';
+        c.beginPath();
+        c.roundRect(5, -7, 9, 15, 4);
+        c.fill();
+        c.beginPath();
+        c.moveTo(10, 4);
+        c.lineTo(18, 8);
+        c.lineTo(12, 11);
+        c.closePath();
+        c.fill();
+
+        // Big rounded head and soft muzzle
+        c.fillStyle = '#a4907c';
+        c.beginPath();
+        c.ellipse(10, -8, 13, 12, 0.04, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#8d7b68';
+        c.beginPath();
+        c.arc(3, -18, 9, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#f2b5d4';
+        c.beginPath();
+        c.arc(4, -18, 5.5, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#eadcc5';
+        c.beginPath();
+        c.ellipse(21, -3, 8, 5, 0.12, 0, Math.PI * 2);
+        c.fill();
+
+        // Bright eye, rosy cheek, tiny nose, and whiskers
+        c.fillStyle = '#ff8fa3';
+        c.beginPath();
+        c.arc(22, -1, 3, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#1d1e18';
+        c.beginPath();
+        c.arc(15, -9, 3, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#fff8e8';
+        c.beginPath();
+        c.arc(16, -10, 1, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#ff8fa3';
+        c.beginPath();
+        c.arc(29, -3, 2.2, 0, Math.PI * 2);
+        c.fill();
+        c.strokeStyle = '#f3e6d5';
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(23, -3);
+        c.lineTo(34, -7);
+        c.moveTo(24, -1);
+        c.lineTo(36, -1);
+        c.moveTo(23, 1);
+        c.lineTo(33, 5);
+        c.stroke();
+
+        // Front paw
+        c.fillStyle = '#b8a693';
+        c.beginPath();
+        c.ellipse(8 + legSwing, 18, 6, 4, 0, 0, Math.PI * 2);
+        c.fill();
+
+      } else if (type === 'reggie') {
+        // REGGIE THE RACCOON
+        // Bushy ringed tail
+        c.save();
+        c.translate(-16, 6);
+        c.rotate(-0.3 + Math.sin(runCycle * 0.2) * 0.1);
+        c.fillStyle = '#6c757d';
+        c.beginPath();
+        c.ellipse(-12, 0, 15, 7, 0, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#2b2d42';
+        c.fillRect(-18, -6, 4, 12);
+        c.fillRect(-10, -6, 4, 12);
+        c.restore();
+
+        // Back leg
+        c.fillStyle = '#343a40';
+        c.beginPath();
+        c.ellipse(-7 - legSwing, 18, 7, 4.5, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Plump Raccoon Body
+        c.fillStyle = '#6c757d';
+        c.beginPath();
+        c.ellipse(0, 5, 20, 15, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Head
+        c.fillStyle = '#8d99ae';
+        c.beginPath();
+        c.arc(13, -4, 11, 0, Math.PI * 2);
+        c.fill();
+
+        // Snout
+        c.fillStyle = '#edf2f4';
+        c.beginPath();
+        c.ellipse(23, -1, 6, 4.5, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Black Bandit Mask
+        c.fillStyle = '#2b2d42';
+        c.beginPath();
+        c.ellipse(17, -4, 4.5, 5.5, 0.2, 0, Math.PI * 2);
+        c.fill();
+
+        // Pointed Ear
+        c.fillStyle = '#495057';
+        c.beginPath();
+        c.moveTo(6, -12);
+        c.lineTo(10, -21);
+        c.lineTo(15, -12);
+        c.closePath();
+        c.fill();
+
+        // Eye & Nose
+        c.fillStyle = '#ffffff';
+        c.beginPath();
+        c.arc(18, -4, 1.8, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#111';
+        c.beginPath();
+        c.arc(28, -1, 2.5, 0, Math.PI * 2);
+        c.fill();
+
+        // Front leg
+        c.fillStyle = '#495057';
+        c.beginPath();
+        c.ellipse(8 + legSwing, 18, 7, 4.5, 0, 0, Math.PI * 2);
+        c.fill();
+
+      } else if (type === 'sebal') {
+        // SEBAL THE SQUIRREL
+        // Big fluffy curled tail
+        c.fillStyle = '#bc4749';
+        c.beginPath();
+        c.arc(-16, 0, 14, 0, Math.PI * 2);
+        c.arc(-18, -11, 11, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#d96b43';
+        c.beginPath();
+        c.arc(-15, -2, 9, 0, Math.PI * 2);
+        c.fill();
+
+        // Back leg
+        c.fillStyle = '#9e383a';
+        c.beginPath();
+        c.ellipse(-6 - legSwing, 18, 6.5, 4, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Body (russet red-orange)
+        c.fillStyle = '#c8553d';
+        c.beginPath();
+        c.ellipse(0, 6, 17, 13, -0.15, 0, Math.PI * 2);
+        c.fill();
+
+        // Cream belly patch
+        c.fillStyle = '#f2e8cf';
+        c.beginPath();
+        c.ellipse(5, 8, 9, 9, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // Head
+        c.fillStyle = '#c8553d';
+        c.beginPath();
+        c.arc(13, -5, 10, 0, Math.PI * 2);
+        c.fill();
+
+        // Tufted Squirrel Ear
+        c.beginPath();
+        c.moveTo(7, -13);
+        c.lineTo(9, -22);
+        c.lineTo(14, -13);
+        c.closePath();
+        c.fill();
+
+        // Cheek & Nose & Eye
+        c.fillStyle = '#f2e8cf';
+        c.beginPath();
+        c.arc(20, -2, 4.5, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#2b1d12';
+        c.beginPath();
+        c.arc(23, -3, 2, 0, Math.PI * 2);
+        c.arc(16, -6, 2, 0, Math.PI * 2);
+        c.fill();
+
+        // Front leg
+        c.fillStyle = '#d96b43';
+        c.beginPath();
+        c.ellipse(8 + legSwing, 18, 6.5, 4, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+
+      c.restore();
+    }
+
+    const STORY_SLIDES = [
+      {
+        title: 'Once upon a time',
+        text: 'Once upon a time, there was a magical forest with woodland critters who loved to run.'
+      },
+      {
+        title: 'A nimble little crew',
+        text: 'They were very good at ducking under or jumping over obstacles in their path.'
+      },
+      {
+        title: 'Carrots with a little magic',
+        text: 'They loved to collect carrots to give them magical protection.'
+      }
+    ];
+
+    function drawStoryCarrot(target, x, y) {
+      target.save();
+      target.translate(x, y);
+      target.rotate(-0.22);
+      target.fillStyle = '#6a994e';
+      target.beginPath();
+      target.ellipse(-3, -10, 3, 6, -0.5, 0, Math.PI * 2);
+      target.ellipse(2, -12, 3, 6, 0.4, 0, Math.PI * 2);
+      target.fill();
+      target.fillStyle = '#ed8129';
+      target.beginPath();
+      target.moveTo(-6, -8);
+      target.quadraticCurveTo(0, -12, 6, -8);
+      target.lineTo(2, 6);
+      target.lineTo(0, 11);
+      target.lineTo(-4, 4);
+      target.closePath();
+      target.fill();
+      target.restore();
+    }
+
+    function renderStoryArt() {
+      const art = document.getElementById('storyArt');
+      if (!art) return;
+      const storyCtx = art.getContext('2d');
+      const artWidth = art.width;
+      const artHeight = art.height;
+
+      const sky = storyCtx.createLinearGradient(0, 0, 0, artHeight);
+      sky.addColorStop(0, '#a9c28b');
+      sky.addColorStop(0.7, '#d8d2a6');
+      sky.addColorStop(1, '#82966a');
+      storyCtx.fillStyle = sky;
+      storyCtx.fillRect(0, 0, artWidth, artHeight);
+
+      storyCtx.fillStyle = '#79906a';
+      storyCtx.beginPath();
+      storyCtx.moveTo(0, 195);
+      storyCtx.quadraticCurveTo(130, 125, 260, 194);
+      storyCtx.quadraticCurveTo(390, 132, 520, 190);
+      storyCtx.lineTo(520, 260);
+      storyCtx.lineTo(0, 260);
+      storyCtx.fill();
+
+      // Soft tree line behind the critters.
+      for (let i = 0; i < 8; i++) {
+        const x = 24 + i * 68;
+        storyCtx.fillStyle = '#6a5039';
+        storyCtx.fillRect(x - 5, 105, 10, 95);
+        storyCtx.fillStyle = i % 2 ? '#54734a' : '#638052';
+        storyCtx.beginPath();
+        storyCtx.arc(x, 88, 35, 0, Math.PI * 2);
+        storyCtx.arc(x - 20, 103, 26, 0, Math.PI * 2);
+        storyCtx.arc(x + 20, 104, 27, 0, Math.PI * 2);
+        storyCtx.fill();
+      }
+
+      storyCtx.fillStyle = '#53683d';
+      storyCtx.fillRect(0, 210, artWidth, 50);
+      storyCtx.fillStyle = '#a2b56b';
+      storyCtx.fillRect(0, 207, artWidth, 6);
+
+      const characters = ['mac', 'reggie', 'sebal'];
+      const positions = [112, 260, 408];
+      characters.forEach((character, index) => {
+        const x = positions[index];
+        const running = storySlideIndex === 1;
+        if (running) {
+          storyCtx.strokeStyle = 'rgba(255, 248, 218, 0.75)';
+          storyCtx.lineWidth = 3;
+          storyCtx.beginPath();
+          storyCtx.moveTo(x - 54, 155 + index * 7);
+          storyCtx.lineTo(x - 36, 155 + index * 7);
+          storyCtx.moveTo(x - 48, 169 + index * 5);
+          storyCtx.lineTo(x - 32, 169 + index * 5);
+          storyCtx.stroke();
+        }
+
+        drawCharacter(storyCtx, character, x, 194, false, running ? frameCount + index * 5 : 0, true);
+
+        if (storySlideIndex === 2) {
+          drawStoryCarrot(storyCtx, x + 31, 186);
+          storyCtx.fillStyle = '#fff3d1';
+          storyCtx.beginPath();
+          storyCtx.arc(x + 26, 184, 1.5, 0, Math.PI * 2);
+          storyCtx.arc(x + 28, 189, 1, 0, Math.PI * 2);
+          storyCtx.fill();
+        }
+      });
+
+      // Small flowers keep the illustration connected to the game world.
+      for (const x of [48, 185, 335, 476]) {
+        storyCtx.fillStyle = '#f3d46d';
+        storyCtx.beginPath();
+        storyCtx.arc(x, 205, 3, 0, Math.PI * 2);
+        storyCtx.fill();
+      }
+    }
+
+    function updateStorySlide() {
+      const slide = STORY_SLIDES[storySlideIndex];
+      document.getElementById('storyTitle').textContent = slide.title;
+      document.getElementById('storyText').textContent = slide.text;
+      document.getElementById('storyCounter').textContent = `${storySlideIndex + 1} / ${STORY_SLIDES.length}`;
+      document.getElementById('storyProgress').textContent = STORY_SLIDES
+        .map((_, index) => index === storySlideIndex ? '●' : '○')
+        .join(' ');
+      document.getElementById('storyBack').disabled = storySlideIndex === 0;
+      document.getElementById('storyNext').textContent =
+        storySlideIndex === STORY_SLIDES.length - 1 ? 'Choose a character' : 'Next';
+      renderStoryArt();
+    }
+
+    function changeStory(direction) {
+      startAudio();
+      const nextSlide = storySlideIndex + direction;
+      if (nextSlide < 0) return;
+      if (nextSlide >= STORY_SLIDES.length) {
+        gameState = 'SELECT';
+        document.getElementById('storyboardScreen').style.display = 'none';
+        document.getElementById('selectScreen').style.display = 'flex';
+        return;
+      }
+      storySlideIndex = nextSlide;
+      updateStorySlide();
+    }
+
+    // Render character previews on the selection cards
+    function renderPreviews() {
+      const mCtx = document.getElementById('previewMac').getContext('2d');
+      drawCharacter(mCtx, 'mac', 42, 42, false, 0, true);
+
+      const rCtx = document.getElementById('previewReggie').getContext('2d');
+      drawCharacter(rCtx, 'reggie', 42, 42, false, 0, true);
+
+      const sCtx = document.getElementById('previewSebal').getContext('2d');
+      drawCharacter(sCtx, 'sebal', 42, 42, false, 0, true);
+    }
+    renderPreviews();
+    updateStorySlide();
+
+    function selectCharacter(charName) {
+      if (gameState === 'DANCE' || gameState === 'WARMUP') return;
+      startAudio();
+      runMode = 'normal';
+      selectedChar = charName;
+      document.getElementById('selectScreen').style.display = 'none';
+      prepareRun();
+    }
+
+    function startDanceParty() {
+      if (gameState !== 'SELECT') return;
+      gameState = 'DANCE';
+      gamePointer = null;
+      dancePartyStartedAt = performance.now();
+      document.getElementById('selectScreen').style.display = 'none';
+      document.getElementById('dancePartyStatus').hidden = true;
+      startAudio();
+      dancePartyTimer = window.setTimeout(finishDanceParty, DANCE_PARTY_DURATION_MS);
+    }
+
+    function finishDanceParty() {
+      if (gameState !== 'DANCE') return;
+      window.clearTimeout(dancePartyTimer);
+      dancePartyTimer = null;
+      if (partyMusic) {
+        partyMusic.pause();
+        partyMusic.currentTime = 0;
+      }
+      document.getElementById('dancePartyStatus').hidden = true;
+      gameState = 'SELECT';
+      document.getElementById('selectScreen').style.display = 'flex';
+      if (audioContext && ambienceBus) ambienceBus.gain.setValueAtTime(0.65, audioContext.currentTime);
+      resetFrameClock();
+      startAudio();
+    }
+
+    function startWarmupScene() {
+      if (gameState !== 'SELECT') return;
+      gameState = 'WARMUP';
+      gamePointer = null;
+      warmupStartedAt = performance.now();
+      document.getElementById('selectScreen').style.display = 'none';
+      document.getElementById('workoutSceneStatus').hidden = true;
+      startAudio();
+      warmupTimer = window.setTimeout(finishWarmupScene, WARMUP_DURATION_MS);
+    }
+
+    function finishWarmupScene() {
+      if (gameState !== 'WARMUP') return;
+      window.clearTimeout(warmupTimer);
+      warmupTimer = null;
+      if (workoutMusic) {
+        workoutMusic.pause();
+        workoutMusic.currentTime = 0;
+      }
+      if (crowdCheering) {
+        crowdCheering.pause();
+        crowdCheering.currentTime = 0;
+      }
+      document.getElementById('workoutSceneStatus').hidden = true;
+      gameState = 'SELECT';
+      document.getElementById('selectScreen').style.display = 'flex';
+      if (audioContext && ambienceBus) ambienceBus.gain.setValueAtTime(0.65, audioContext.currentTime);
+      resetFrameClock();
+      startAudio();
+    }
+
+    function startRelaxationMode() {
+      if (gameState !== 'SELECT') return;
+      runMode = 'relaxation';
+      const runners = ['mac', 'reggie', 'sebal'];
+      for (let i = runners.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [runners[i], runners[j]] = [runners[j], runners[i]];
+      }
+      selectedChar = runners[0];
+      document.getElementById('selectScreen').style.display = 'none';
+      prepareRun();
+      relaxationFollowers = runners.slice(1).map((character, index) => ({
+        character,
+        gap: COMPANION_FOLLOW_GAP * (index + 1),
+        pose: { lift: 0, ducking: false, grounded: true }
+      }));
+      startRun();
+    }
+
+    function endRelaxationMode() {
+      if (runMode === 'relaxation') returnToSelect();
+    }
+
+    function returnToSelect() {
+      stopHaloSound();
+      if (runMode === 'relaxation') {
+        distanceFeet = 0;
+        gameSpeed = INITIAL_GAME_SPEED;
+        nextSpeedUpAt = SPEED_UP_INTERVAL_FEET;
+        obstacles = [];
+        carrots = [];
+        apples = [];
+        companion = null;
+        relaxationFollowers = [];
+        playerTrail = [];
+        player.x = 90;
+        document.getElementById('scoreDisplay').textContent = '0';
+      }
+      runMode = 'normal';
+      gameState = 'SELECT';
+      document.getElementById('endRelaxationButton').hidden = true;
+      document.getElementById('instructions').style.display = 'none';
+      document.getElementById('scorePanel').style.display = 'none';
+      document.getElementById('applePanel').style.display = 'none';
+      document.getElementById('gameOverScreen').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('carrotHud').style.display = 'none';
+      document.getElementById('selectScreen').style.display = 'flex';
+    }
+
+    function prepareRun(startFeet = 0) {
+      stopHaloSound();
+      gameState = 'READY';
+      distanceFeet = startFeet;
+      const speedMilestones = Math.floor(startFeet / SPEED_UP_INTERVAL_FEET);
+      gameSpeed = INITIAL_GAME_SPEED * Math.pow(SPEED_UP_MULTIPLIER, speedMilestones);
+      nextSpeedUpAt = (speedMilestones + 1) * SPEED_UP_INTERVAL_FEET;
+      obstacles = [];
+      carrots = [];
+      apples = [];
+      nextAppleAtFeet = startFeet + randomAppleGap();
+      nextGreenAppleAtFeet =
+        (Math.floor(startFeet / GREEN_APPLE_INTERVAL_FEET) + 1) * GREEN_APPLE_INTERVAL_FEET;
+      carrotCount = 0;
+      carrotPoints = 0;
+      invincibleUntil = 0;
+      resumeProtection = false;
+      companion = null;
+      relaxationFollowers = [];
+      soloStartFeet = 0;
+      trailDistance = 0;
+      playerTrail = [];
+      nextCarrotAtFeet = startFeet + FIRST_CARROT_MIN_FEET + Math.random() * FIRST_CARROT_RANGE_FEET;
+      nextSpawnTimer = 70;
+      // Leave room for both followers even on a narrow phone screen.
+      player.x = runMode === 'relaxation' ? 140 : 90;
+      player.y = groundY - 22;
+      player.vy = 0;
+      player.isGrounded = true;
+      player.isDucking = false;
+      player.hasExtendedJump = false;
+      player.airHangFrames = 0;
+      player.jumpProgress = 0;
+      player.jumpStep = 1 / JUMP_DURATION_FRAMES;
+      if (runMode === 'normal' && startFeet >= COMPANION_SOLO_FEET) {
+        companion = createCompanion({ lift: 0, ducking: false, grounded: true });
+      }
+
+      document.getElementById('gameOverScreen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      document.getElementById('carrotHud').style.display = runMode === 'normal' ? 'block' : 'none';
+      document.getElementById('companionStatus').style.display = runMode === 'normal' ? 'block' : 'none';
+      document.getElementById('scorePanel').style.display = 'none';
+      document.getElementById('applePanel').style.display = 'none';
+      document.getElementById('scoreDisplay').textContent = Math.floor(startFeet);
+      updateCarrotHud();
+      updateCompanionHud();
+      updateAppleHud();
+      document.getElementById('instructions').style.display = 'block';
+    }
+
+    function startRun() {
+      if (gameState !== 'READY') return;
+      startAudio();
+      resetFrameClock();
+      gameState = 'PLAYING';
+      document.getElementById('scorePanel').style.display = 'block';
+      document.getElementById('applePanel').style.display = runMode === 'normal' ? 'block' : 'none';
+      document.getElementById('endRelaxationButton').hidden = runMode !== 'relaxation';
+      populateApples();
+      document.getElementById('instructions').style.display = 'none';
+    }
+
+    function isInvincible() {
+      return invincibleUntil > performance.now();
+    }
+
+    function updateCompanionHud() {
+      if (runMode === 'relaxation') {
+        document.getElementById('companionStatus').textContent = '';
+        return;
+      }
+      const names = { mac: 'Mac', reggie: 'Reggie', sebal: 'Sebal' };
+      document.getElementById('companionStatus').textContent = companion
+        ? `${names[companion.character]} is with you · 1 spare life`
+        : `Friend in ${Math.max(0, Math.ceil(COMPANION_SOLO_FEET - (distanceFeet - soloStartFeet))).toLocaleString('en-US')} ft`;
+    }
+
+    function createCompanion(pose) {
+      const choices = ['mac', 'reggie', 'sebal'].filter(character => character !== selectedChar);
+      return { character: choices[Math.floor(Math.random() * choices.length)], pose };
+    }
+
+    function updateCompanion() {
+      // Replay by distance, not by a fixed frame delay, so the follower performs
+      // each action at the same place along the trail even as speed increases.
+      trailDistance += gameSpeed;
+      const snapshot = {
+        distance: trailDistance,
+        lift: groundY - 22 - player.y,
+        ducking: player.isDucking,
+        grounded: player.isGrounded
+      };
+      if (!playerTrail.length) {
+        playerTrail.push({
+          ...(runMode === 'relaxation' ? { lift: 0, ducking: false, grounded: true } : snapshot),
+          distance: trailDistance - COMPANION_FOLLOW_GAP * (runMode === 'relaxation' ? 2 : 1)
+        });
+      }
+      playerTrail.push(snapshot);
+      const oldestTarget = trailDistance - COMPANION_FOLLOW_GAP * (runMode === 'relaxation' ? 2 : 1);
+      while (playerTrail.length > 2 && playerTrail[1].distance <= oldestTarget) playerTrail.shift();
+
+      if (runMode === 'normal' && !companion && distanceFeet - soloStartFeet >= COMPANION_SOLO_FEET) {
+        companion = createCompanion(snapshot);
+      }
+      if (runMode === 'relaxation') {
+        relaxationFollowers.forEach(follower => {
+          follower.pose = trailPoseAt(trailDistance - follower.gap);
+        });
+      } else if (companion) {
+        companion.pose = trailPoseAt(trailDistance - COMPANION_FOLLOW_GAP);
+      }
+      updateCompanionHud();
+    }
+
+    function trailPoseAt(target) {
+      let index = 0;
+      while (index + 1 < playerTrail.length && playerTrail[index + 1].distance <= target) index++;
+      const before = playerTrail[index];
+      const after = playerTrail[index + 1] || before;
+      const fraction = Math.max(0, Math.min(1,
+        (target - before.distance) / Math.max(0.001, after.distance - before.distance)));
+      return {
+        lift: before.lift + (after.lift - before.lift) * fraction,
+        ducking: before.ducking,
+        grounded: before.grounded && after.grounded
+      };
+    }
+
+    function absorbCompanionHit(obstacle) {
+      companion = null;
+      soloStartFeet = distanceFeet;
+      // Ignore this same obstacle on subsequent frames, but not new obstacles.
+      obstacle.absorbed = true;
+      playObstacleContactSound(obstacle.type);
+      updateCompanionHud();
+    }
+
+    function updateCarrotHud() {
+      document.getElementById('carrotCount').textContent = carrotCount;
+      document.getElementById('carrotPointsDisplay').textContent = carrotPoints;
+
+      const remainingMs = invincibleUntil - performance.now();
+      const status = document.getElementById('invincibleStatus');
+      if (remainingMs > 0) {
+        status.textContent = `Invincible: ${(Math.ceil(remainingMs / 100) / 10).toFixed(1)}s`;
+        status.style.display = 'block';
+      } else {
+        status.textContent = '';
+        status.style.display = 'none';
+      }
+    }
+
+    function awardCarrot() {
+      if (runMode === 'relaxation') return;
+      carrotPoints += CARROT_POINTS;
+      if (isInvincible()) {
+        invincibleUntil += 1000;
+        startAudio();
+      } else {
+        // A carrot arriving just after expiry starts a new count, never carries
+        // carrots collected during the previous power-up into the next round.
+        if (invincibleUntil) {
+          invincibleUntil = 0;
+          if (!resumeProtection) carrotCount = 0;
+          resumeProtection = false;
+          stopHaloSound();
+        }
+        if (carrotCount < CARROTS_FOR_INVINCIBILITY) {
+          carrotCount++;
+          if (carrotCount === CARROTS_FOR_INVINCIBILITY) {
+            resumeProtection = false;
+            invincibleUntil = performance.now() + INVINCIBILITY_DURATION_MS;
+            startAudio();
+          }
+        }
+      }
+      updateCarrotHud();
+    }
+
+    // A tap jumps; a downward drag ducks without also triggering a jump.
+    // Pointer events handle touch and mouse without duplicate synthetic clicks.
+    let gamePointer = null;
+    window.addEventListener('pointerdown', (e) => {
+      startAudio();
+      if (!e.isPrimary || e.button !== 0 ||
+          e.target.closest('button, .char-card') ||
+          !['READY', 'PLAYING'].includes(gameState)) return;
+      gamePointer = {
+        id: e.pointerId, x: e.clientX, y: e.clientY,
+        handled: false, startedReady: gameState === 'READY'
+      };
+    }, { passive: true });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!gamePointer || gamePointer.id !== e.pointerId || gamePointer.handled) return;
+      const dy = e.clientY - gamePointer.y;
+      if (dy > 14 && Math.abs(dy) > Math.abs(e.clientX - gamePointer.x)) {
+        gamePointer.handled = true;
+        if (gameState === 'PLAYING') duck();
+      }
+    }, { passive: true });
+
+    window.addEventListener('pointerup', (e) => {
+      // Pointer-up is also an audio-unlocking gesture on mobile browsers.
+      startAudio();
+      if (!gamePointer || gamePointer.id !== e.pointerId) return;
+      const gesture = gamePointer;
+      gamePointer = null;
+      if (gesture.handled || Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y) > 14) return;
+      if (gameState === 'READY' && gesture.startedReady) startRun();
+      else if (gameState === 'PLAYING' && !gesture.startedReady) jump();
+    }, { passive: true });
+
+    window.addEventListener('pointercancel', () => { gamePointer = null; }, { passive: true });
+
+    // Optional keyboard support if tested on desktop
+    window.addEventListener('keydown', (e) => {
+      if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
+        e.preventDefault();
+        if (e.repeat) return;
+        startAudio();
+      }
+      if (gameState === 'READY' && (e.code === 'Space' || e.code === 'ArrowUp')) {
+        startRun();
+      } else if (gameState === 'PLAYING') {
+        if (e.code === 'ArrowUp' || e.code === 'Space') jump();
+        if (e.code === 'ArrowDown') duck();
+      }
+    });
+
+    function jump() {
+      if (player.isGrounded) {
+        player.vy = JUMP_VELOCITY;
+        player.isGrounded = false;
+        player.isDucking = false;
+        player.hasExtendedJump = false;
+        player.airHangFrames = 0;
+        player.jumpProgress = 0;
+        player.jumpStep = 1 / JUMP_DURATION_FRAMES;
+        playJumpSound();
+      } else if (!player.hasExtendedJump) {
+        // Add a normal jump's extra airtime, scaled with the game's speed below.
+        player.hasExtendedJump = true;
+        const remaining = Math.max(0.001, 1 - player.jumpProgress);
+        player.jumpStep = remaining / (remaining * JUMP_DURATION_FRAMES + AIR_HANG_EXTENSION_FRAMES);
+        player.isDucking = false;
+        playJumpSound();
+      }
+    }
+
+    function duck() {
+      if (!player.isDucking) playDuckSound();
+      player.isDucking = true;
+      player.duckTimer = DUCK_DURATION_FRAMES;
+      if (!player.isGrounded) {
+        // Fast-drop if swiping down mid-air
+        player.airHangFrames = 0;
+        player.vy = 10;
+      }
+    }
+
+    function spawnObstacle() {
+      // 6 distinct obstacles:
+      // Jump over: 'log', 'briar', 'puddle', 'fence'
+      // Duck under: 'bird', 'branch'
+      const types = ['log', 'briar', 'puddle', 'fence', 'bird', 'branch'];
+      const type = types[Math.floor(Math.random() * types.length)];
+
+      let obs = {
+        type: type,
+        x: width + 80,
+        passed: false
+      };
+
+      if (type === 'log') {
+        obs.w = 42;
+        obs.h = 30;
+        obs.y = groundY - obs.h;
+      } else if (type === 'briar') {
+        obs.w = 50;
+        obs.h = 28;
+        obs.y = groundY - obs.h;
+      } else if (type === 'puddle') {
+        obs.w = 64;
+        obs.h = 12;
+        obs.y = groundY - 6;
+      } else if (type === 'fence') {
+        obs.w = 34;
+        obs.h = 28;
+        obs.y = groundY - obs.h;
+      } else if (type === 'bird') {
+        // Low flying bird positioned at head height (duck to avoid)
+        obs.w = 44;
+        obs.h = 24;
+        obs.y = groundY - 52;
+      } else if (type === 'branch') {
+        // Background tree with low overhanging branch (duck to avoid)
+        obs.w = 56;
+        obs.h = 30;
+        obs.y = groundY - 56;
+      }
+
+      // Reserve a clear approach to each ground apple so it never demands
+      // jumping or ducking through an obstacle to collect it.
+      if (apples.some(apple => apple.x >= obs.x - 60 && apple.x <= obs.x + obs.w + 60)) return;
+      obstacles.push(obs);
+    }
+
+    function spawnCarrot() {
+      if (runMode === 'relaxation') return;
+      carrots.push({
+        x: width + 80,
+        y: groundY - 56 + (Math.random() * 6 - 3),
+        w: 26,
+        h: 32,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    function drawSparkle(x, y, radius, phase) {
+      const opacity = 0.55 + Math.sin(frameCount * 0.24 + phase) * 0.4;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.strokeStyle = '#fff8c9';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - radius, y);
+      ctx.lineTo(x + radius, y);
+      ctx.moveTo(x, y - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.moveTo(x - radius * 0.55, y - radius * 0.55);
+      ctx.lineTo(x + radius * 0.55, y + radius * 0.55);
+      ctx.moveTo(x + radius * 0.55, y - radius * 0.55);
+      ctx.lineTo(x - radius * 0.55, y + radius * 0.55);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCarrot(carrot) {
+      const bob = Math.sin(frameCount * 0.12 + carrot.phase) * 3;
+      ctx.save();
+      ctx.translate(carrot.x, carrot.y + bob);
+      ctx.rotate(-0.18);
+
+      // Bright leaves and a glossy, tapered orange root.
+      ctx.fillStyle = '#5d9b45';
+      ctx.beginPath();
+      ctx.ellipse(-4, -13, 4, 8, -0.45, 0, Math.PI * 2);
+      ctx.ellipse(2, -15, 4, 8, 0.1, 0, Math.PI * 2);
+      ctx.ellipse(7, -12, 4, 7, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowColor = 'rgba(255, 220, 120, 0.9)';
+      ctx.shadowBlur = 13;
+      ctx.fillStyle = '#f47b20';
+      ctx.beginPath();
+      ctx.moveTo(-8, -10);
+      ctx.quadraticCurveTo(0, -16, 8, -10);
+      ctx.lineTo(4, 5);
+      ctx.quadraticCurveTo(2, 13, 0, 17);
+      ctx.quadraticCurveTo(-5, 10, -7, 2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#ffc15a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-4, -5);
+      ctx.lineTo(-2, -2);
+      ctx.moveTo(3, 1);
+      ctx.lineTo(1, 4);
+      ctx.moveTo(-3, 7);
+      ctx.lineTo(-1, 9);
+      ctx.stroke();
+      ctx.restore();
+
+      drawSparkle(carrot.x - 15, carrot.y - 10 + bob, 4, carrot.phase);
+      drawSparkle(carrot.x + 14, carrot.y + 4 + bob, 3, carrot.phase + 1.5);
+    }
+
+    function drawCarrots() {
+      carrots.forEach(drawCarrot);
+    }
+
+    function invincibilityRingVisible(now = performance.now()) {
+      const remaining = invincibleUntil - now;
+      return remaining > 0 &&
+        (!(resumeProtection || remaining <= 3000) || Math.floor(now / 180) % 2 === 0);
+    }
+
+    function drawInvincibilityRing() {
+      const now = performance.now();
+      if (!invincibilityRingVisible(now)) return;
+      const pulse = 0.78 + Math.sin(now * 0.009) * 0.15;
+      const rx = player.isDucking ? 36 : 33;
+      const ry = player.isDucking ? 22 : 29;
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.ellipse(
+        player.x,
+        player.y - 4,
+        player.isDucking ? 36 : 33,
+        player.isDucking ? 22 : 29,
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+      // Traveling glints shimmer around the white halo.
+      for (let i = 0; i < 6; i++) {
+        const angle = now * 0.002 + i * Math.PI / 3;
+        const x = player.x + Math.cos(angle) * rx;
+        const y = player.y - 4 + Math.sin(angle) * ry;
+        const size = 2 + (Math.sin(now * 0.012 + i) + 1);
+        ctx.beginPath();
+        ctx.moveTo(x - size, y);
+        ctx.lineTo(x + size, y);
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x, y + size);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawStaticBackground() {
+      if (staticBackgroundCanvas.width !== width || staticBackgroundCanvas.height !== height) {
+        staticBackgroundCanvas.width = width;
+        staticBackgroundCanvas.height = height;
+        staticBackgroundDirty = true;
+      }
+      if (!staticBackgroundDirty) {
+        ctx.drawImage(staticBackgroundCanvas, 0, 0);
+        return;
+      }
+
+      const visibleContext = ctx;
+      ctx = staticBackgroundCtx;
+      // Warm cottagecore golden-hour forest sky/mist gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+      skyGrad.addColorStop(0, '#4f6d4a');
+      skyGrad.addColorStop(0.55, '#8aa373');
+      skyGrad.addColorStop(1, '#d8cfa8');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, groundY);
+
+      // Soft sunbeams filtering through canopy
+      ctx.fillStyle = 'rgba(255, 244, 200, 0.12)';
+      ctx.beginPath();
+      ctx.moveTo(width * 0.2, 0);
+      ctx.lineTo(width * 0.45, 0);
+      ctx.lineTo(width * 0.65, groundY);
+      ctx.lineTo(width * 0.1, groundY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Distant woodland hills
+      ctx.fillStyle = '#5c7852';
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      for (let x = 0; x <= width; x += 60) {
+        ctx.lineTo(x, groundY - 65 - Math.sin(x * 0.01) * 25);
+      }
+      ctx.lineTo(width, groundY);
+      ctx.fill();
+
+      // Stationary forest trees & foliage
+      bgDetails.forEach(item => {
+        if (item.type === 'bgTree') {
+          // Trunk
+          ctx.fillStyle = '#4a3525';
+          ctx.fillRect(item.x - item.trunkW / 2, groundY - 190, item.trunkW, 190);
+          // Canopy
+          ctx.fillStyle = item.shade;
+          ctx.beginPath();
+          ctx.arc(item.x, groundY - 195, item.canopyR, 0, Math.PI * 2);
+          ctx.arc(item.x - 30, groundY - 175, item.canopyR * 0.75, 0, Math.PI * 2);
+          ctx.arc(item.x + 30, groundY - 175, item.canopyR * 0.75, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (item.type === 'mushroom') {
+          ctx.save();
+          ctx.translate(item.x, groundY);
+          ctx.scale(item.scale, item.scale);
+          ctx.fillStyle = '#f5ebe0';
+          ctx.fillRect(-4, -14, 8, 14);
+          ctx.fillStyle = '#c14953';
+          ctx.beginPath();
+          ctx.arc(0, -14, 12, Math.PI, 0);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(-4, -18, 2, 0, Math.PI * 2);
+          ctx.arc(4, -17, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (item.type === 'fern') {
+          ctx.fillStyle = '#3d6336';
+          ctx.beginPath();
+          ctx.ellipse(item.x - 7, groundY - 6, 10, 4, -0.4, 0, Math.PI * 2);
+          ctx.ellipse(item.x + 7, groundY - 6, 10, 4, 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (item.type === 'flowers') {
+          ctx.fillStyle = '#4f772d';
+          ctx.fillRect(item.x - 1, groundY - 10, 2, 10);
+          ctx.fillStyle = item.color;
+          ctx.beginPath();
+          ctx.arc(item.x, groundY - 11, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx = visibleContext;
+      staticBackgroundDirty = false;
+      ctx.drawImage(staticBackgroundCanvas, 0, 0);
+    }
+
+    function drawForestFloor() {
+      // Base rich soil track
+      ctx.fillStyle = '#4b3621';
+      ctx.fillRect(0, groundY, width, height - groundY);
+
+      // Mossy grass top border
+      ctx.fillStyle = '#607c3c';
+      ctx.fillRect(0, groundY, width, 12);
+
+      // Moving floor texture (pebbles, fallen leaves, roots moving left)
+      const spacing = 48;
+      const startX = -(floorOffset % spacing);
+      for (let x = startX; x < width + spacing; x += spacing) {
+        // Grass tuft
+        ctx.fillStyle = '#739347';
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x + 6, groundY - 6);
+        ctx.lineTo(x + 12, groundY);
+        ctx.fill();
+
+        // Soil pebbles & twigs
+        ctx.fillStyle = '#362515';
+        ctx.beginPath();
+        ctx.ellipse(x + 18, groundY + 26, 7, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#6b4f35';
+        ctx.fillRect(x + 32, groundY + 45, 14, 3);
+      }
+    }
+
+    function drawObstacles() {
+      obstacles.forEach(obs => {
+        if (obs.type === 'log') {
+          // Fallen Log (Hop over)
+          ctx.fillStyle = '#5c3a21';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 8);
+          ctx.fill();
+          // Bark lines & end ring
+          ctx.strokeStyle = '#3b2312';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(obs.x + 4, obs.y + 6, obs.w - 16, 4);
+          ctx.fillStyle = '#c89f72';
+          ctx.beginPath();
+          ctx.ellipse(obs.x + obs.w - 7, obs.y + obs.h / 2, 6, obs.h / 2 - 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else if (obs.type === 'briar') {
+          // Thorny Briar Patch (Hop over)
+          ctx.fillStyle = '#2d4726';
+          ctx.beginPath();
+          ctx.arc(obs.x + 12, obs.y + 18, 13, 0, Math.PI * 2);
+          ctx.arc(obs.x + 26, obs.y + 14, 15, 0, Math.PI * 2);
+          ctx.arc(obs.x + 39, obs.y + 19, 12, 0, Math.PI * 2);
+          ctx.fill();
+          // Thorns & berries
+          ctx.fillStyle = '#9e2a2b';
+          ctx.beginPath();
+          ctx.arc(obs.x + 20, obs.y + 12, 3, 0, Math.PI * 2);
+          ctx.arc(obs.x + 33, obs.y + 16, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else if (obs.type === 'puddle') {
+          // Water Puddle (Hop over)
+          ctx.fillStyle = '#5fa8d3';
+          ctx.beginPath();
+          ctx.ellipse(obs.x + obs.w / 2, groundY + 5, obs.w / 2, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#bee9e8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.ellipse(obs.x + obs.w / 2, groundY + 5, obs.w / 3, 4, 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+        } else if (obs.type === 'fence') {
+          // Cottagecore Wooden Picket Fence (Hop over)
+          ctx.fillStyle = '#e6ccb2';
+          // Horizontal rails
+          ctx.fillRect(obs.x, obs.y + obs.h * 0.35, obs.w, 4);
+          ctx.fillRect(obs.x, obs.y + obs.h * 0.7, obs.w, 4);
+          // Vertical pickets
+          for (let px = obs.x + 2; px < obs.x + obs.w - 4; px += 11) {
+            ctx.beginPath();
+            ctx.moveTo(px, obs.y + obs.h);
+            ctx.lineTo(px, obs.y + 6);
+            ctx.lineTo(px + 4, obs.y);
+            ctx.lineTo(px + 8, obs.y + 6);
+            ctx.lineTo(px + 8, obs.y + obs.h);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+        } else if (obs.type === 'bird') {
+          // Low-Flying Woodland Bird (Duck under)
+          const wingFlap = Math.sin(frameCount * 0.25) * 8;
+          ctx.fillStyle = '#bc4749'; // Robin red-brown
+          ctx.beginPath();
+          ctx.ellipse(obs.x + 22, obs.y + 14, 16, 9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Beak facing left
+          ctx.fillStyle = '#ffb703';
+          ctx.beginPath();
+          ctx.moveTo(obs.x + 6, obs.y + 12);
+          ctx.lineTo(obs.x - 2, obs.y + 15);
+          ctx.lineTo(obs.x + 6, obs.y + 17);
+          ctx.closePath();
+          ctx.fill();
+          // Wing
+          ctx.strokeStyle = '#6a2c2e';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(obs.x + 20, obs.y + 12);
+          ctx.lineTo(obs.x + 28, obs.y + 12 - wingFlap);
+          ctx.stroke();
+
+        } else if (obs.type === 'branch') {
+          // Tree behind track with low overhanging branch (Duck under)
+          // Tree trunk rooted behind the track
+          ctx.fillStyle = '#3f2a1d';
+          ctx.fillRect(obs.x + 36, obs.y - 110, 22, 110 + (groundY - obs.y));
+          // Low overhanging branch extending left across player head height
+          ctx.fillStyle = '#4f3524';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y + 6, 46, 12, 5);
+          ctx.fill();
+          // Leaf cluster hanging from branch
+          ctx.fillStyle = '#588157';
+          ctx.beginPath();
+          ctx.arc(obs.x + 14, obs.y + 12, 13, 0, Math.PI * 2);
+          ctx.arc(obs.x + 28, obs.y + 10, 14, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function update() {
+      frameCount++;
+
+      if (gameState !== 'PLAYING') return;
+
+      // Move the forest and keep the seven-second power-up timer accurate.
+      if (invincibleUntil && performance.now() >= invincibleUntil) {
+        invincibleUntil = 0;
+        stopHaloSound();
+        if (!resumeProtection) carrotCount = 0;
+        resumeProtection = false;
+        updateCarrotHud();
+      }
+
+      floorOffset += gameSpeed;
+      const previousDistanceFeet = distanceFeet;
+      // Convert the existing distance rate from meters to feet.
+      distanceFeet += gameSpeed * 0.03 * METERS_TO_FEET;
+      document.getElementById('scoreDisplay').textContent = Math.floor(distanceFeet);
+
+      // Increase speed by 10% at each 300-foot milestone.
+      while (distanceFeet >= nextSpeedUpAt) {
+        gameSpeed *= SPEED_UP_MULTIPLIER;
+        nextSpeedUpAt += SPEED_UP_INTERVAL_FEET;
+      }
+
+      // Player gravity & jump
+      if (!player.isGrounded) {
+        if (player.isDucking) {
+          player.vy += GRAVITY;
+          player.y += player.vy;
+        } else {
+          player.jumpProgress = Math.min(1,
+            player.jumpProgress + player.jumpStep * (gameSpeed / INITIAL_GAME_SPEED));
+          const arcProgress = player.jumpProgress <= JUMP_ASCENT_FRACTION
+            ? 0.5 * player.jumpProgress / JUMP_ASCENT_FRACTION
+            : 0.5 + 0.5 * (player.jumpProgress - JUMP_ASCENT_FRACTION) / (1 - JUMP_ASCENT_FRACTION);
+          player.y = groundY - 22 - MAX_JUMP_HEIGHT * Math.sin(Math.PI * arcProgress);
+        }
+
+        // Invisible ceiling: keep jumps high enough for fences, but too low
+        // to pass over birds and low branches.
+        const ceilingY = groundY - 22 - MAX_JUMP_HEIGHT;
+        if (player.y < ceilingY) {
+          player.y = ceilingY;
+          player.vy = 0;
+        }
+
+        if (player.y >= groundY - 22 - 0.001) {
+          player.y = groundY - 22;
+          player.vy = 0;
+          player.isGrounded = true;
+          player.hasExtendedJump = false;
+          player.airHangFrames = 0;
+        }
+      }
+
+      // Duck timer
+      if (player.isDucking) {
+        player.duckTimer = Math.max(0, player.duckTimer - 1);
+        if (player.duckTimer <= 0) {
+          // Never stand up into a bird/branch whose trailing edge hasn't
+          // cleared the player. Use its next position, as collisions do below.
+          const stillUnderHazard = obstacles.some(obstacle =>
+            (obstacle.type === 'bird' || obstacle.type === 'branch') &&
+            obstacle.x - gameSpeed + 5 < player.x + 20 &&
+            obstacle.x - gameSpeed + obstacle.w - 5 > player.x - 20);
+          if (!stillUnderHazard) player.isDucking = false;
+        }
+      }
+      updateCompanion();
+      populateApples();
+
+      // Nicely spaced obstacle spawning (adjusts with speed so spacing stays fair)
+      nextSpawnTimer--;
+      if (nextSpawnTimer <= 0) {
+        spawnObstacle();
+        const minGap = Math.max(68, 125 - gameSpeed * 4);
+        nextSpawnTimer = minGap + Math.random() * 45;
+      }
+
+      // Carrots appear at randomized distance intervals, clear of nearby obstacles.
+      while (runMode === 'normal' && distanceFeet >= nextCarrotAtFeet) {
+        const spawnX = width + 80;
+        const obstacleNearSpawn = obstacles.some((obstacle) => Math.abs(obstacle.x - spawnX) < 150);
+        if (!obstacleNearSpawn) spawnCarrot();
+        nextCarrotAtFeet += CARROT_GAP_MIN_FEET + Math.random() * CARROT_GAP_RANGE_FEET;
+      }
+
+      // Move obstacles & check collisions
+      const pHeight = player.isDucking ? player.duckHeight : player.normalHeight;
+      const pBox = {
+        left: player.x - 14,
+        right: player.x + 14,
+        top: (player.y + 22) - pHeight,
+        bottom: player.y + 20
+      };
+
+      for (let i = apples.length - 1; i >= 0; i--) {
+        const apple = apples[i];
+        const previousX = player.x + (apple.atFeet - previousDistanceFeet) / (0.03 * METERS_TO_FEET);
+        if (
+          apple.x - 12 < pBox.right && previousX + 12 > pBox.left &&
+          pBox.bottom > groundY - 25 && pBox.top < groundY - 2
+        ) {
+          apples.splice(i, 1);
+          collectApple(apple.kind === 'green' ? 3 : 1);
+        } else if (apple.x < -30) {
+          apples.splice(i, 1);
+        }
+      }
+
+      // Carrots sit overhead, so they can only be collected during a jump.
+      for (let i = carrots.length - 1; i >= 0; i--) {
+        const carrot = carrots[i];
+        carrot.x -= gameSpeed;
+        const carrotBox = {
+          left: carrot.x - 12,
+          right: carrot.x + 12,
+          top: carrot.y - 16,
+          bottom: carrot.y + 16
+        };
+
+        if (
+          !player.isGrounded &&
+          pBox.right > carrotBox.left &&
+          pBox.left < carrotBox.right &&
+          pBox.bottom > carrotBox.top &&
+          pBox.top < carrotBox.bottom
+        ) {
+          carrots.splice(i, 1);
+          awardCarrot();
+          continue;
+        }
+
+        if (carrot.x + carrot.w < -80) {
+          carrots.splice(i, 1);
+        }
+      }
+
+      if (invincibleUntil && frameCount % 6 === 0) updateCarrotHud();
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.x -= gameSpeed;
+
+        // Forgiving hitbox padding
+        const isPuddle = obs.type === 'puddle';
+        const isOverhead = obs.type === 'bird' || obs.type === 'branch';
+        const oBox = {
+          left: obs.x + 5,
+          right: obs.x + obs.w - 5,
+          // Overhead hazards extend up to the invisible ceiling, so the
+          // more forgiving low-obstacle jump cannot bypass ducking hazards.
+          top: isOverhead ? groundY - MAX_JUMP_HEIGHT - 24 : obs.y + (isPuddle ? 2 : 4),
+          bottom: obs.y + obs.h - 2
+        };
+
+        if (
+          pBox.right > oBox.left &&
+          pBox.left < oBox.right &&
+          pBox.bottom > oBox.top &&
+          pBox.top < oBox.bottom
+        ) {
+          if (!obs.absorbed && !isInvincible()) {
+            if (runMode === 'relaxation') {
+              // Charge a slowdown once per obstacle, never every overlapping frame.
+              obs.absorbed = true;
+              gameSpeed = Math.max(INITIAL_GAME_SPEED, gameSpeed * 0.9);
+              playObstacleContactSound(obs.type);
+            } else if (companion) {
+              absorbCompanionHit(obs);
+            } else {
+              endRun(obs.type);
+              return;
+            }
+          }
+        }
+
+        if (obs.x + obs.w < -80) {
+          obstacles.splice(i, 1);
+        }
+      }
+    }
+
+    function endRun(obstacleType) {
+      if (gameState !== 'PLAYING' || runMode === 'relaxation') return;
+      lastRunSnapshot = {
+        character: selectedChar, distanceFeet, gameSpeed, nextSpeedUpAt,
+        carrotCount, carrotPoints, soloStartFeet,
+        companion: companion ? structuredClone(companion) : null
+      };
+      stopHaloSound();
+      playObstacleContactSound(obstacleType);
+      gameState = 'GAMEOVER';
+      document.getElementById('scorePanel').style.display = 'none';
+      document.getElementById('applePanel').style.display = 'none';
+      updateAppleHud();
+      const finalDist = Math.floor(distanceFeet);
+      if (finalDist > bestScoreFeet) {
+        bestScoreFeet = finalDist;
+        try {
+          localStorage.setItem(BEST_SCORE_STORAGE_KEY, String(bestScoreFeet));
+        } catch (error) {
+          console.warn('Unable to save the new best distance.', error);
+        }
+      }
+
+      document.getElementById('finalScore').textContent = finalDist;
+      document.getElementById('finalPoints').textContent = carrotPoints;
+      document.getElementById('bestScoreText').textContent = `Best: ${bestScoreFeet} ft`;
+      document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    function resetBestScore() {
+      if (!window.confirm('Reset your saved best distance to 0 ft? This cannot be undone.')) return;
+      try {
+        localStorage.setItem(BEST_SCORE_STORAGE_KEY, '0');
+      } catch (error) {
+        console.warn('Unable to reset the saved best distance.', error);
+        window.alert('Your best distance could not be reset. Please try again.');
+        return;
+      }
+      bestScoreFeet = 0;
+      document.getElementById('bestScoreText').textContent = 'Best: 0 ft';
+    }
+
+    // Physics values are calibrated for 60 updates per second, independent
+    // of the display refresh rate. Bound catch-up after a slow/background tab.
+    const PHYSICS_STEP_MS = 1000 / 60;
+    let lastFrameTime = null;
+    let physicsAccumulator = 0;
+
+    function resetFrameClock() {
+      lastFrameTime = null;
+      physicsAccumulator = 0;
+    }
+    document.addEventListener('visibilitychange', resetFrameClock);
+
+    function loop(timestamp) {
+      if (gameState === 'DANCE' && performance.now() - dancePartyStartedAt >= DANCE_PARTY_DURATION_MS) {
+        finishDanceParty();
+      }
+      if (gameState === 'WARMUP' && performance.now() - warmupStartedAt >= WARMUP_DURATION_MS) {
+        finishWarmupScene();
+      }
+      if (Number.isFinite(timestamp)) {
+        if (lastFrameTime !== null && !document.hidden && gameState === 'PLAYING') {
+          physicsAccumulator += Math.min(100, Math.max(0, timestamp - lastFrameTime));
+          while (physicsAccumulator + 0.000001 >= PHYSICS_STEP_MS) {
+            update();
+            physicsAccumulator = Math.max(0, physicsAccumulator - PHYSICS_STEP_MS);
+            if (gameState !== 'PLAYING') {
+              physicsAccumulator = 0;
+              break;
+            }
+          }
+        } else {
+          physicsAccumulator = 0;
+        }
+        lastFrameTime = timestamp;
+      }
+      ctx.clearRect(0, 0, width, height);
+
+      if (gameState === 'DANCE') {
+        window.drawWoodlandDanceScene(ctx, width, height,
+          (performance.now() - dancePartyStartedAt) / 1000, drawCharacter,
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      } else if (gameState === 'WARMUP') {
+        window.drawWoodlandWarmupScene(ctx, width, height,
+          (performance.now() - warmupStartedAt) / 1000, drawCharacter,
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      } else {
+        drawStaticBackground();
+        drawForestFloor();
+      }
+
+      if (gameState === 'STORY' && storySlideIndex === 1) {
+        renderStoryArt();
+      }
+
+      if (gameState === 'READY' || gameState === 'PLAYING' || gameState === 'GAMEOVER') {
+        drawObstacles();
+        drawCarrots();
+        drawApples();
+        const animTick = gameState === 'PLAYING' ? frameCount : 0;
+        for (const follower of relaxationFollowers.slice().reverse()) {
+          const pose = follower.pose;
+          drawCharacter(ctx, follower.character, player.x - follower.gap,
+            groundY - 22 - pose.lift, pose.ducking, animTick, pose.grounded);
+        }
+        if (companion) {
+          const pose = companion.pose;
+          drawCharacter(ctx, companion.character, player.x - COMPANION_FOLLOW_GAP,
+            groundY - 22 - pose.lift, pose.ducking, animTick, pose.grounded);
+        }
+        if (isInvincible()) drawInvincibilityRing();
+        drawCharacter(ctx, selectedChar, player.x, player.y, player.isDucking, animTick, player.isGrounded);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>
