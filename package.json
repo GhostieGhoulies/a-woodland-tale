@@ -1,0 +1,12 @@
+{
+  "name": "forest-runner-regressions",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:companion": "playwright test tests/companion.spec.js",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
+}
