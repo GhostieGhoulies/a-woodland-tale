@@ -1,0 +1,102 @@
+/* Regular-run pause controls — tuned to the existing forest HUD. */
+#runHud {
+  pointer-events: none;
+}
+
+#scorePanel {
+  position: relative;
+  pointer-events: none;
+}
+
+#pauseRunButton {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(212, 180, 131, 0.78);
+  border-radius: 12px;
+  background: rgba(43, 48, 29, 0.92);
+  box-shadow: 0 3px 0 rgba(31, 35, 22, 0.72);
+  color: #fff8e8;
+  font-family: Georgia, serif;
+  font-size: clamp(14px, 3.6vw, 18px);
+  font-weight: bold;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#pauseRunButton:hover {
+  background: rgba(66, 72, 43, 0.96);
+  border-color: #e4c795;
+}
+
+#pauseRunButton:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(31, 35, 22, 0.72);
+}
+
+#pauseRunButton:focus-visible {
+  outline: 2px solid #ffe5ad;
+  outline-offset: 3px;
+}
+
+#pauseRunButton[hidden],
+#resumeCountdown[hidden] {
+  display: none !important;
+}
+
+#resumeCountdown {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: rgba(35, 43, 29, 0.2);
+  pointer-events: auto;
+  text-align: center;
+}
+
+#resumeCountdownNumber {
+  display: block;
+  max-width: 100%;
+  color: #fff2ce;
+  font-family: "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
+  font-size: clamp(8rem, 33vmin, 25rem);
+  font-weight: 900;
+  font-variant-numeric: lining-nums;
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  -webkit-text-stroke: clamp(3px, 0.75vmin, 8px) #65482d;
+  paint-order: stroke fill;
+  text-shadow:
+    0 4px 0 #4a3425,
+    0 8px 0 rgba(44, 35, 24, 0.72),
+    0 13px 18px rgba(25, 28, 18, 0.48);
+}
+
+@media (max-width: 460px) {
+  #pauseRunButton {
+    padding-inline: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pauseRunButton {
+    transition: none;
+  }
+}

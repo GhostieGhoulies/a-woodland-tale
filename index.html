@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>A Forest Tale</title>
   <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="pause-controls.css">
   <style>
     * {
       margin: 0;
@@ -386,7 +387,7 @@
 
   <!-- Character Selection Screen -->
   <div id="selectScreen" class="overlay" style="display: none;">
-    <h1>A Forest Tale</h1>
+    <h1>A Woodland Tale</h1>
     <p class="subtitle">Choose your woodland traveler</p>
     <div class="char-grid">
       <div class="char-card" onclick="selectCharacter('mac')">
@@ -458,6 +459,8 @@
     <div id="appleSaveWarning" role="status"></div>
   </div>
   <div id="scorePanel">
+    <button id="pauseRunButton" type="button" hidden aria-pressed="false"
+      onclick="toggleRunPause()" onkeydown="event.stopPropagation()">Pause</button>
     <div id="hud">Distance: <span id="scoreDisplay">0</span> ft</div>
     <div id="carrotHud">
       <div>Carrot count: <span id="carrotCount">0</span> / 5</div>
@@ -466,6 +469,9 @@
     </div>
     <div id="companionStatus"></div>
   </div>
+  </div>
+  <div id="resumeCountdown" role="status" aria-live="assertive" aria-atomic="true" hidden>
+    <span id="resumeCountdownNumber">3</span>
   </div>
 
   <button id="endRelaxationButton" class="btn" hidden onclick="endRelaxationMode()">end run</button>
@@ -521,8 +527,12 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // Game States: 'STORY', 'SELECT', 'READY', 'PLAYING', 'GAMEOVER'
+    // Run states include READY, PLAYING, PAUSED, RESUMING, and GAMEOVER.
     let gameState = 'STORY';
+    let runPausedAt = null;
+    let savedPauseAccumulator = 0;
+    let resumeCountdownEndsAt = 0;
+    let resumeCountdownTimer = null;
     const DANCE_PARTY_DURATION_MS = 10000;
     let dancePartyStartedAt = 0;
     let dancePartyTimer = null;
@@ -990,6 +1000,7 @@
     }
 
     function startHaloSound() {
+      if (isRunPaused()) return;
       if (!audioContext || audioMuted || !isInvincible()) return;
       const now = audioContext.currentTime;
       const duration = (invincibleUntil - performance.now()) / 1000;
@@ -1744,6 +1755,7 @@
 
     function returnToSelect() {
       stopHaloSound();
+      clearRunPause();
       if (runMode === 'relaxation') {
         distanceFeet = 0;
         gameSpeed = INITIAL_GAME_SPEED;
@@ -1771,6 +1783,7 @@
 
     function prepareRun(startFeet = 0) {
       stopHaloSound();
+      clearRunPause();
       gameState = 'READY';
       distanceFeet = startFeet;
       const speedMilestones = Math.floor(startFeet / SPEED_UP_INTERVAL_FEET);
@@ -1825,6 +1838,7 @@
       startAudio();
       resetFrameClock();
       gameState = 'PLAYING';
+      document.getElementById('pauseRunButton').hidden = runMode !== 'normal';
       document.getElementById('scorePanel').style.display = 'block';
       document.getElementById('applePanel').style.display = runMode === 'normal' ? 'block' : 'none';
       document.getElementById('endRelaxationButton').hidden = runMode !== 'relaxation';
@@ -1832,8 +1846,79 @@
       document.getElementById('instructions').style.display = 'none';
     }
 
+    function isRunPaused() {
+      return gameState === 'PAUSED' || gameState === 'RESUMING';
+    }
+
+    function runTimeNow() {
+      return isRunPaused() && runPausedAt !== null ? runPausedAt : performance.now();
+    }
+
+    function clearRunPause() {
+      window.clearInterval(resumeCountdownTimer);
+      resumeCountdownTimer = null;
+      resumeCountdownEndsAt = 0;
+      runPausedAt = null;
+      savedPauseAccumulator = 0;
+      const button = document.getElementById('pauseRunButton');
+      button.hidden = true;
+      button.disabled = false;
+      button.textContent = 'Pause';
+      button.setAttribute('aria-pressed', 'false');
+      document.getElementById('resumeCountdown').hidden = true;
+    }
+
+    function toggleRunPause() {
+      if (runMode !== 'normal') return;
+      const button = document.getElementById('pauseRunButton');
+      if (gameState === 'PLAYING') {
+        runPausedAt = performance.now();
+        savedPauseAccumulator = physicsAccumulator;
+        gameState = 'PAUSED';
+        gamePointer = null;
+        stopHaloSound();
+        button.textContent = 'Resume';
+        button.setAttribute('aria-pressed', 'true');
+      } else if (gameState === 'PAUSED') {
+        gameState = 'RESUMING';
+        button.disabled = true;
+        gamePointer = null;
+        resumeCountdownEndsAt = performance.now() + 3000;
+        document.getElementById('resumeCountdown').hidden = false;
+        resumeCountdownTimer = window.setInterval(advanceResumeCountdown, 100);
+        advanceResumeCountdown();
+      }
+    }
+
+    function advanceResumeCountdown() {
+      if (gameState !== 'RESUMING') return;
+      const now = performance.now();
+      const remaining = resumeCountdownEndsAt - now;
+      if (remaining > 0) {
+        document.getElementById('resumeCountdownNumber').textContent = Math.ceil(remaining / 1000);
+        return;
+      }
+      window.clearInterval(resumeCountdownTimer);
+      resumeCountdownTimer = null;
+      resumeCountdownEndsAt = 0;
+      // Wall-clock protection does not expire while paused or counting down.
+      if (invincibleUntil > runPausedAt) invincibleUntil += now - runPausedAt;
+      runPausedAt = null;
+      gamePointer = null;
+      gameState = 'PLAYING';
+      physicsAccumulator = savedPauseAccumulator;
+      lastFrameTime = null; // No catch-up movement after a long pause.
+      const button = document.getElementById('pauseRunButton');
+      button.disabled = false;
+      button.textContent = 'Pause';
+      button.setAttribute('aria-pressed', 'false');
+      document.getElementById('resumeCountdown').hidden = true;
+      updateCarrotHud();
+      startAudio();
+    }
+
     function isInvincible() {
-      return invincibleUntil > performance.now();
+      return invincibleUntil > runTimeNow();
     }
 
     function updateCompanionHud() {
@@ -1912,7 +1997,7 @@
       document.getElementById('carrotCount').textContent = carrotCount;
       document.getElementById('carrotPointsDisplay').textContent = carrotPoints;
 
-      const remainingMs = invincibleUntil - performance.now();
+      const remainingMs = invincibleUntil - runTimeNow();
       const status = document.getElementById('invincibleStatus');
       if (remainingMs > 0) {
         status.textContent = `Invincible: ${(Math.ceil(remainingMs / 100) / 10).toFixed(1)}s`;
@@ -2002,6 +2087,7 @@
     });
 
     function jump() {
+      if (isRunPaused()) return;
       if (player.isGrounded) {
         player.vy = JUMP_VELOCITY;
         player.isGrounded = false;
@@ -2022,6 +2108,7 @@
     }
 
     function duck() {
+      if (isRunPaused()) return;
       if (!player.isDucking) playDuckSound();
       player.isDucking = true;
       player.duckTimer = DUCK_DURATION_FRAMES;
@@ -2157,14 +2244,14 @@
       carrots.forEach(drawCarrot);
     }
 
-    function invincibilityRingVisible(now = performance.now()) {
+    function invincibilityRingVisible(now = runTimeNow()) {
       const remaining = invincibleUntil - now;
       return remaining > 0 &&
         (!(resumeProtection || remaining <= 3000) || Math.floor(now / 180) % 2 === 0);
     }
 
     function drawInvincibilityRing() {
-      const now = performance.now();
+      const now = runTimeNow();
       if (!invincibilityRingVisible(now)) return;
       const pulse = 0.78 + Math.sin(now * 0.009) * 0.15;
       const rx = player.isDucking ? 36 : 33;
@@ -2430,6 +2517,7 @@
     }
 
     function update() {
+      if (isRunPaused()) return;
       frameCount++;
 
       if (gameState !== 'PLAYING') return;
@@ -2624,6 +2712,7 @@
       stopHaloSound();
       playObstacleContactSound(obstacleType);
       gameState = 'GAMEOVER';
+      clearRunPause();
       document.getElementById('scorePanel').style.display = 'none';
       document.getElementById('applePanel').style.display = 'none';
       updateAppleHud();
@@ -2669,6 +2758,7 @@
     document.addEventListener('visibilitychange', resetFrameClock);
 
     function loop(timestamp) {
+      advanceResumeCountdown();
       if (gameState === 'DANCE' && performance.now() - dancePartyStartedAt >= DANCE_PARTY_DURATION_MS) {
         finishDanceParty();
       }
@@ -2686,7 +2776,7 @@
               break;
             }
           }
-        } else {
+        } else if (gameState !== 'PLAYING' || lastFrameTime !== null) {
           physicsAccumulator = 0;
         }
         lastFrameTime = timestamp;
@@ -2710,11 +2800,11 @@
         renderStoryArt();
       }
 
-      if (gameState === 'READY' || gameState === 'PLAYING' || gameState === 'GAMEOVER') {
+      if (gameState === 'READY' || gameState === 'PLAYING' || gameState === 'GAMEOVER' || isRunPaused()) {
         drawObstacles();
         drawCarrots();
         drawApples();
-        const animTick = gameState === 'PLAYING' ? frameCount : 0;
+        const animTick = gameState === 'PLAYING' || isRunPaused() ? frameCount : 0;
         for (const follower of relaxationFollowers.slice().reverse()) {
           const pose = follower.pose;
           drawCharacter(ctx, follower.character, player.x - follower.gap,
