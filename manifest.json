@@ -32,19 +32,19 @@
   "screenshots": [
     {
       "src": "IMG_8023.png",
-      "type": "png",
+      "type": "image/png",
       "form_factor": "narrow",
       "label": "A Woodland Tale gameplay"
     },
     {
       "src": "IMG_8024.png",
-      "type": "png",
+      "type": "image/png",
       "form_factor": "narrow",
       "label": "A Woodland Tale adventure"
     },
     {
       "src": "IMG_8025.png",
-      "type": "png",
+      "type": "image/png",
       "form_factor": "narrow",
       "label": "A Woodland Tale woodland path"
     }
