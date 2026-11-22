@@ -38,13 +38,13 @@
     },
     {
       "src": "IMG_8024.png",
-      "type": "image/png",
+      "type": "png",
       "form_factor": "narrow",
       "label": "A Woodland Tale adventure"
     },
     {
       "src": "IMG_8025.png",
-      "type": "image/png",
+      "type": "png",
       "form_factor": "narrow",
       "label": "A Woodland Tale woodland path"
     }
